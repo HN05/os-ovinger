@@ -1,0 +1,10 @@
+Executing sh took 10 ticks
+Executing sh took 10 ticks
+Executing sh took 10 ticks
+Executing sh took 11 ticks
+Executing sh took 11 ticks
+Executing sh took 11 ticks
+Executing sh took 11 ticks
+Executing sh took 11 ticks
+Executing sh took 11 ticks
+Executing sh took 10 ticks
