@@ -67,47 +67,33 @@ usertrap(void)
     syscall();
   } else if (r_scause() == 15) {
     // illegal write
+    
+    if(killed(p))
+      exit(-1);
+
     uint64 va = PGROUNDDOWN(r_stval());
 
-    // get proc inf
-    acquire(&p->lock);
-    pagetable_t pgtable = p->pagetable;
-    int pid = p->pid;
-    release(&p->lock);
+    // do not need p->lock, since in trap
 
-    pte_t *pgentry = walk(pgtable, va, 0);
-    if (!pgentry) {
-      panic("todo");
+    pte_t *pte = walk(p->pagetable, va, 0);
+    if (!pte) {
+      // does not have va mapped
+      printf("tried to write to page not mapped pid=%d", p->pid);
+      printf("            sepc=%p stval=%p\n", r_sepc(), r_stval());
+      setkilled(p);
     }
-    int isCOW = PTE_COW & *pgentry;
+
+    int isCOW = PTE_COW & *pte;
 
     if (isCOW)
     {
-      // set normal write
-      *pgentry &= ~PTE_COW;
-      *pgentry |= PTE_W;
-
-      uint64 pa = transvirtproc(va, pid);
-      int refcount = getrefcount(pa);
-
-      // check if need to copy to new page
-      if (refcount > 1) {
-	decrefcount(pa);
-
-	// get new page
-	void* new = kalloc();
-	if (new == 0)
-	{
-	  panic("todo");
-	}
-	
-	// copy to new page
-	memmove(new, (void*) pa, PGSIZE);
-
-	// update pte
-	uint flags = PTE_FLAGS(*pgentry);
-	*pgentry = PA2PTE(new) | flags;
-      }
+      cow_triggered(pte);
+    }
+    else 
+    {
+      printf("illegal write pid=%d", p->pid);
+      printf("            sepc=%p stval=%p\n", r_sepc(), r_stval());
+      setkilled(p);
     }
   } else if((which_dev = devintr()) != 0){
     // ok

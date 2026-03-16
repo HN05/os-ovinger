@@ -71,8 +71,7 @@ void ramdiskrw(struct buf *);
 void *kalloc(void);
 void kfree(void *);
 void kinit(void);
-int getrefcount(uint64 pa);
-void decrefcount(uint64 pa);
+void cow_triggered(pte_t *pte);
 void increfcount(uint64 pa);
 
 // log.c

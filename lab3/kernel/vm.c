@@ -314,22 +314,24 @@ uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
       panic("uvmcopy: pte should exist");
     if((*pte & PTE_V) == 0)
       panic("uvmcopy: page not present");
+
     pa = PTE2PA(*pte);
 
     increfcount(pa);
 
     if (*pte & PTE_W)
     {
-	*pte &= ~PTE_W; // remove write access
-	*pte |= PTE_COW; // set copy on write
+      *pte = (*pte & ~PTE_W) | PTE_COW;
     }
     
     flags = PTE_FLAGS(*pte);
 
     if(mappages(new, i, PGSIZE, pa, flags) != 0){
+      sfence_vma(); // flush tlb to be safe
       goto err;
     }
   }
+  sfence_vma(); // flush tlb
   return 0;
 
  err:
@@ -446,16 +448,16 @@ copyinstr(pagetable_t pagetable, char *dst, uint64 srcva, uint64 max)
 
 uint64 transvirt(uint64 vaddr, pagetable_t pagetable)
 {
-    for (int level = 2; level > 0; level--)
-    {
-	pte_t *pte = &pagetable[PX(level, vaddr)];
-	if (*pte & PTE_V) {
-	    pagetable = (pagetable_t) PTE2PA(*pte);
-	} else {
-	    return 0;
-	}
+  for (int level = 2; level > 0; level--)
+  {
+    pte_t *pte = &pagetable[PX(level, vaddr)];
+    if (*pte & PTE_V) {
+      pagetable = (pagetable_t) PTE2PA(*pte);
+    } else {
+      return 0;
     }
-    uint64 pagenum = PTE2PA(pagetable[PX(0, vaddr)]);
-    uint64 offset = vaddr & 0xFFF;
-    return pagenum | offset;
+  }
+  uint64 pagenum = PTE2PA(pagetable[PX(0, vaddr)]);
+  uint64 offset = vaddr & 0xFFF;
+  return pagenum | offset;
 }

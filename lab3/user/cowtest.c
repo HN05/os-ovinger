@@ -92,6 +92,7 @@ void testcase4()
 
         printf("[prnt] v3 --> ");
         print_free_frame_cnt();
+        sleep(100);
         printf("[prnt] pa3 --> 0x%x\n", va2pa((uint64)&global_array[0], getpid()));
     }
 

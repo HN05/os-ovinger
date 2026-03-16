@@ -1,3 +1,83 @@
+/home/lab/ovinger/lab3/./test-lab-l3:12: SyntaxWarning: invalid escape sequence '\:'
+  r.match("Usage\: vatopa virtual_address \[pid\]")
+/home/lab/ovinger/lab3/./test-lab-l3:47: SyntaxWarning: invalid escape sequence '\['
+  "^\[prnt\] v1 --> (\d+)$",
+/home/lab/ovinger/lab3/./test-lab-l3:48: SyntaxWarning: invalid escape sequence '\['
+  "^\[prnt\] v4 --> (\d+)$",
+/home/lab/ovinger/lab3/./test-lab-l3:52: SyntaxWarning: invalid escape sequence '\['
+  "^\[prnt\] v3 --> (\d+)$",
+/home/lab/ovinger/lab3/./test-lab-l3:53: SyntaxWarning: invalid escape sequence '\['
+  "^\[chld\] v2 --> (\d+)$",
+/home/lab/ovinger/lab3/./test-lab-l3:64: SyntaxWarning: invalid escape sequence '\['
+  "^\[prnt\] v1 --> (\d+)$",
+/home/lab/ovinger/lab3/./test-lab-l3:65: SyntaxWarning: invalid escape sequence '\['
+  "^\[prnt\] v5 --> (\d+)$",
+/home/lab/ovinger/lab3/./test-lab-l3:69: SyntaxWarning: invalid escape sequence '\['
+  "^\[prnt\] v2 --> (\d+)$",
+/home/lab/ovinger/lab3/./test-lab-l3:70: SyntaxWarning: invalid escape sequence '\['
+  "^\[chld\] v3 --> (\d+)$",
+/home/lab/ovinger/lab3/./test-lab-l3:74: SyntaxWarning: invalid escape sequence '\['
+  "^\[chld\] v4 --> (\d+)$",
+/home/lab/ovinger/lab3/./test-lab-l3:75: SyntaxWarning: invalid escape sequence '\['
+  "^\[chld\] v3 --> (\d+)$",
+/home/lab/ovinger/lab3/./test-lab-l3:79: SyntaxWarning: invalid escape sequence '\['
+  "^\[chld\] read global_var, global_var=0$",
+/home/lab/ovinger/lab3/./test-lab-l3:89: SyntaxWarning: invalid escape sequence '\['
+  "^\[prnt\] v1 --> (\d+)$",
+/home/lab/ovinger/lab3/./test-lab-l3:90: SyntaxWarning: invalid escape sequence '\['
+  "^\[prnt\] v6 --> (\d+)$",
+/home/lab/ovinger/lab3/./test-lab-l3:94: SyntaxWarning: invalid escape sequence '\['
+  "^\[prnt\] v2 --> (\d+)$",
+/home/lab/ovinger/lab3/./test-lab-l3:95: SyntaxWarning: invalid escape sequence '\['
+  "^\[prnt\] v3 --> (\d+)$",
+/home/lab/ovinger/lab3/./test-lab-l3:99: SyntaxWarning: invalid escape sequence '\['
+  "^\[prnt\] v3 --> (\d+)$",
+/home/lab/ovinger/lab3/./test-lab-l3:100: SyntaxWarning: invalid escape sequence '\['
+  "^\[chld\] v4 --> (\d+)$",
+/home/lab/ovinger/lab3/./test-lab-l3:104: SyntaxWarning: invalid escape sequence '\['
+  "^\[chld\] v4 --> (\d+)$",
+/home/lab/ovinger/lab3/./test-lab-l3:105: SyntaxWarning: invalid escape sequence '\['
+  "^\[chld\] v5 --> (\d+)$",
+/home/lab/ovinger/lab3/./test-lab-l3:109: SyntaxWarning: invalid escape sequence '\['
+  "^\[chld\] modified global_var, global_var=100$",
+/home/lab/ovinger/lab3/./test-lab-l3:112: SyntaxWarning: invalid escape sequence '\['
+  "^\[prnt\] read global_var, global_var=0$",
+/home/lab/ovinger/lab3/./test-lab-l3:122: SyntaxWarning: invalid escape sequence '\['
+  "^\[prnt\] v1 --> (\d+)$",
+/home/lab/ovinger/lab3/./test-lab-l3:123: SyntaxWarning: invalid escape sequence '\['
+  "^\[prnt\] v7 --> (\d+)$",
+/home/lab/ovinger/lab3/./test-lab-l3:127: SyntaxWarning: invalid escape sequence '\['
+  "^\[prnt\] v2 --> (\d+)$",
+/home/lab/ovinger/lab3/./test-lab-l3:128: SyntaxWarning: invalid escape sequence '\['
+  "^\[prnt\] v3 --> (\d+)$",
+/home/lab/ovinger/lab3/./test-lab-l3:132: SyntaxWarning: invalid escape sequence '\['
+  "^\[chld\] global_array\[0\] --> (\d+)$",
+/home/lab/ovinger/lab3/./test-lab-l3:133: SyntaxWarning: invalid escape sequence '\['
+  "^\[prnt\] global_array\[0\] --> (\d+)$",
+/home/lab/ovinger/lab3/./test-lab-l3:137: SyntaxWarning: invalid escape sequence '\['
+  "^\[chld\] pa1 --> 0x([0-9a-fA-F]+)$",
+/home/lab/ovinger/lab3/./test-lab-l3:138: SyntaxWarning: invalid escape sequence '\['
+  "^\[chld\] pa2 --> 0x([0-9a-fA-F]+)$",
+/home/lab/ovinger/lab3/./test-lab-l3:139: SyntaxWarning: invalid escape sequence '\['
+  "^\[prnt\] pa3 --> 0x([0-9a-fA-F]+)$",
+/home/lab/ovinger/lab3/./test-lab-l3:146: SyntaxWarning: invalid escape sequence '\['
+  "^\[prnt\] v3 --> (\d+)$",
+/home/lab/ovinger/lab3/./test-lab-l3:147: SyntaxWarning: invalid escape sequence '\['
+  "^\[chld\] v4 --> (\d+)$",
+/home/lab/ovinger/lab3/./test-lab-l3:151: SyntaxWarning: invalid escape sequence '\['
+  "^\[prnt\] v3 --> (\d+)$",
+/home/lab/ovinger/lab3/./test-lab-l3:152: SyntaxWarning: invalid escape sequence '\['
+  "^\[chld\] v5 --> (\d+)$",
+/home/lab/ovinger/lab3/./test-lab-l3:156: SyntaxWarning: invalid escape sequence '\['
+  "^\[chld\] v5 --> (\d+)$",
+/home/lab/ovinger/lab3/./test-lab-l3:157: SyntaxWarning: invalid escape sequence '\['
+  "^\[chld\] v6 --> (\d+)$",
+/home/lab/ovinger/lab3/./test-lab-l3:161: SyntaxWarning: invalid escape sequence '\['
+  "^\[chld\] modified one element in the 1st page, global_array\[0\]=222$",
+/home/lab/ovinger/lab3/./test-lab-l3:164: SyntaxWarning: invalid escape sequence '\['
+  "^\[chld\] modified two elements in the 2nd page, global_array\[2047\]=333$",
+/home/lab/ovinger/lab3/./test-lab-l3:167: SyntaxWarning: invalid escape sequence '\['
+  "^\[prnt\] modified one element in the 1st page, global_array\[0\]=111$",
 make[1]: Entering directory '/home/lab/ovinger/lab3'
 riscv64-linux-gnu-gcc    -c -o kernel/entry.o kernel/entry.S
 riscv64-linux-gnu-gcc -Wall -Werror -O -fno-omit-frame-pointer -ggdb -gdwarf-2 -MD -mcmodel=medany -ffreestanding -fno-common -nostdlib -mno-relax -I. -fno-stack-protector -fno-pie -no-pie   -c -o kernel/start.o kernel/start.c
@@ -28,18 +108,20 @@ riscv64-linux-gnu-gcc -Wall -Werror -O -fno-omit-frame-pointer -ggdb -gdwarf-2 -
 riscv64-linux-gnu-gcc -Wall -Werror -O -fno-omit-frame-pointer -ggdb -gdwarf-2 -MD -mcmodel=medany -ffreestanding -fno-common -nostdlib -mno-relax -I. -fno-stack-protector -fno-pie -no-pie   -c -o kernel/virtio_disk.o kernel/virtio_disk.c
 riscv64-linux-gnu-gcc -Wall -Werror -O -fno-omit-frame-pointer -ggdb -gdwarf-2 -MD -mcmodel=medany -ffreestanding -fno-common -nostdlib -mno-relax -I. -fno-stack-protector -fno-pie -no-pie -march=rv64g -nostdinc -I. -Ikernel -c user/initcode.S -o user/initcode.o
 riscv64-linux-gnu-ld -z max-page-size=4096 -N -e start -Ttext 0 -o user/initcode.out user/initcode.o
+riscv64-linux-gnu-ld: warning: user/initcode.out has a LOAD segment with RWX permissions
 riscv64-linux-gnu-objcopy -S -O binary user/initcode.out user/initcode
 riscv64-linux-gnu-objdump -S user/initcode.o > user/initcode.asm
 riscv64-linux-gnu-ld -z max-page-size=4096 -T kernel/kernel.ld -o kernel/kernel kernel/entry.o kernel/start.o kernel/console.o kernel/printf.o kernel/uart.o kernel/kalloc.o kernel/spinlock.o kernel/string.o kernel/main.o kernel/vm.o kernel/proc.o kernel/swtch.o kernel/trampoline.o kernel/trap.o kernel/syscall.o kernel/sysproc.o kernel/bio.o kernel/fs.o kernel/log.o kernel/sleeplock.o kernel/file.o kernel/pipe.o kernel/exec.o kernel/sysfile.o kernel/kernelvec.o kernel/plic.o kernel/virtio_disk.o 
+riscv64-linux-gnu-ld: warning: kernel/kernel has a LOAD segment with RWX permissions
 riscv64-linux-gnu-objdump -S kernel/kernel > kernel/kernel.asm
 riscv64-linux-gnu-objdump -t kernel/kernel | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$/d' > kernel/kernel.sym
 make[1]: Leaving directory '/home/lab/ovinger/lab3'
 == Test [MANDATORY] vatopa exists == 
 $ make qemu-gdb
-[MANDATORY] vatopa exists: [32mOK[0m (1.8s) 
+[MANDATORY] vatopa exists: [32mOK[0m (2.6s) 
 == Test [MANDATORY] vatopa 0 == 
 $ make qemu-gdb
-[MANDATORY] vatopa 0: [32mOK[0m (0.8s) 
+[MANDATORY] vatopa 0: [32mOK[0m (0.6s) 
 == Test [MANDATORY] vatopa 0 1 matches == 
 $ make qemu-gdb
 [32m			Matching OK[0m
@@ -64,16 +146,15 @@ $ make qemu-gdb
 [32m			Matching OK[0m
 [32m			Matching OK[0m
 [32m			Matching OK[0m
-[MANDATORY] cowtest 3 match addresses: [32mOK[0m (5.8s) 
+[MANDATORY] cowtest 3 match addresses: [32mOK[0m (5.9s) 
 == Test [MANDATORY] cowtest 4 match addresses == 
 $ make qemu-gdb
 [32m			Matching OK[0m
 [32m			Matching OK[0m
 [32m			Matching OK[0m
-[MANDATORY] cowtest 4 match addresses: [31mFAIL[0m (5.8s) 
-    [31mRESULT NOT MATCHED[0m
-    83F0D010
-    87F3E010
-    87F3E010
-    QEMU output saved to xv6.out.
-Passed 7 out of 8 tests
+[32m			Matching OK[0m
+[32m			Matching OK[0m
+[32m			Matching OK[0m
+[32m			Matching OK[0m
+[MANDATORY] cowtest 4 match addresses: [32mOK[0m (10.9s) 
+Passed 8 out of 8 tests

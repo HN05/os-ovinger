@@ -32,7 +32,7 @@ struct
 
 #define NPAGES ((PHYSTOP-KERNBASE)/PGSIZE)
 struct spinlock refcountlock;
-int refcount[NPAGES];
+char refcount[NPAGES];
 
 int
 refindex(uint64 pa)
@@ -41,32 +41,6 @@ refindex(uint64 pa)
         panic("refindex");
 
     return (pa - KERNBASE) / PGSIZE;
-}
-
-int
-getrefcount(uint64 pa)
-{
-    int count;
-    acquire(&refcountlock);
-    count = refcount[refindex(pa)];
-    release(&refcountlock);
-    return count;
-}
-
-void
-decrefcount(uint64 pa)
-{
-    acquire(&refcountlock);
-    refcount[refindex(pa)]--;
-    release(&refcountlock);
-}
-
-void
-increfcount(uint64 pa)
-{
-    acquire(&refcountlock);
-    refcount[refindex(pa)]++;
-    release(&refcountlock);
 }
 
 void kinit()
@@ -103,11 +77,10 @@ void kfree(void *pa)
     // decrement refcount
 
     int i = refindex((uint64) pa);
-    int empty;
 
     acquire(&refcountlock);
     if (refcount[i] > 0) refcount[i]--;
-    empty = refcount[i] == 0;
+    int empty = refcount[i] == 0;
     release(&refcountlock);
 
     if (!empty) return;
@@ -153,3 +126,44 @@ kalloc(void)
     return (void *)r;
 }
 
+void cow_triggered(pte_t *pte)
+{
+    uint64 pg = PTE2PA(*pte);
+
+    int i = refindex(pg);
+
+    // check if need to copy to new page
+    acquire(&refcountlock);
+    if (refcount[i] > 1) {
+        refcount[i]--;
+        release(&refcountlock);
+
+        // get new page
+        void* new = kalloc();
+        if (new == 0)
+        {
+          panic("cow_triggered, out of mem");
+        }
+
+        // copy to new page
+        memmove(new, (void*) pg, PGSIZE);
+
+        uint flags = PTE_FLAGS(*pte);
+        flags &= ~PTE_COW;
+        flags |= PTE_W;
+
+        // update pte
+        *pte = PA2PTE(new) | flags;
+    } else {
+        release(&refcountlock);
+        // make normal write
+        *pte = (*pte & ~PTE_COW) | PTE_W;
+    } 
+    sfence_vma(); // flush tlb
+}
+
+void increfcount(uint64 pa) {
+    acquire(&refcountlock);
+    refcount[refindex(pa)]++;
+    release(&refcountlock);
+}
