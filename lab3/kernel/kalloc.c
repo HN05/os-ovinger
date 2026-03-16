@@ -35,14 +35,25 @@ struct spinlock refcountlock;
 int refcount[NPAGES];
 
 int
-refindex(void *pa)
+refindex(uint64 pa)
 {
-    if (((uint64)pa % PGSIZE) != 0 || (uint64)pa < KERNBASE || (uint64)pa >= PHYSTOP)
+    if (pa < KERNBASE || pa >= PHYSTOP)
         panic("refindex");
 
-    return ((uint64) pa - KERNBASE) / PGSIZE;
+    return (pa - KERNBASE) / PGSIZE;
 }
 
+int
+getrefcount(uint64 pa)
+{
+    return refcount[refindex(pa)];
+}
+
+void
+decrefcount(uint64 pa)
+{
+    refcount[refindex(pa)]--;
+}
 
 void kinit()
 {
@@ -77,7 +88,7 @@ void kfree(void *pa)
 
     // decrement refcount
 
-    int i = refindex(pa);
+    int i = refindex((uint64) pa);
     int empty;
 
     acquire(&refcountlock);
@@ -120,7 +131,7 @@ kalloc(void)
         memset((char *)r, 5, PGSIZE); // fill with junk
     FREE_PAGES--;
 
-    int i = refindex((void*) r);
+    int i = refindex((uint64) r);
     acquire(&refcountlock);
     refcount[i] = 1;
     release(&refcountlock);
