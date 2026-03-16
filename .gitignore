@@ -13,3 +13,7 @@
 # editor junk
 *~
 *.swp
+
+# python cache
+__pycache__/
+*.pyc
