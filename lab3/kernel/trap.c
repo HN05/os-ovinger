@@ -88,9 +88,7 @@ usertrap(void)
     if (isCOW)
     {
       cow_triggered(pte);
-    }
-    else 
-    {
+    } else {
       printf("illegal write pid=%d", p->pid);
       printf("            sepc=%p stval=%p\n", r_sepc(), r_stval());
       setkilled(p);

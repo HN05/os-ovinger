@@ -307,7 +307,6 @@ uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
 {
   pte_t *pte;
   uint64 pa, i;
-  uint flags;
 
   for(i = 0; i < sz; i += PGSIZE){
     if((pte = walk(old, i, 0)) == 0)
@@ -316,22 +315,18 @@ uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
       panic("uvmcopy: page not present");
 
     pa = PTE2PA(*pte);
-
     increfcount(pa);
 
+    // make cow
     if (*pte & PTE_W)
     {
       *pte = (*pte & ~PTE_W) | PTE_COW;
     }
     
-    flags = PTE_FLAGS(*pte);
-
-    if(mappages(new, i, PGSIZE, pa, flags) != 0){
-      sfence_vma(); // flush tlb to be safe
+    if(mappages(new, i, PGSIZE, pa, PTE_FLAGS(*pte)) != 0){
       goto err;
     }
   }
-  sfence_vma(); // flush tlb
   return 0;
 
  err:

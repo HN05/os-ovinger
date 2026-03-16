@@ -18,6 +18,19 @@ void freerange(void *pa_start, void *pa_end);
 extern char end[]; // first address after kernel.
                    // defined by kernel.ld.
 		
+#define NPAGES ((PHYSTOP-KERNBASE)/PGSIZE)
+char refcount[NPAGES];
+struct spinlock refcountlock;
+
+int
+refindex(uint64 pa)
+{
+    if (pa < end || pa >= PHYSTOP)
+        panic("refindex out of range");
+
+    return (pa - KERNBASE) / PGSIZE;
+}
+
 
 struct run
 {
@@ -29,19 +42,6 @@ struct
     struct spinlock lock;
     struct run *freelist;
 } kmem;
-
-#define NPAGES ((PHYSTOP-KERNBASE)/PGSIZE)
-struct spinlock refcountlock;
-char refcount[NPAGES];
-
-int
-refindex(uint64 pa)
-{
-    if (pa < KERNBASE || pa >= PHYSTOP)
-        panic("refindex");
-
-    return (pa - KERNBASE) / PGSIZE;
-}
 
 void kinit()
 {
@@ -162,7 +162,8 @@ void cow_triggered(pte_t *pte)
     sfence_vma(); // flush tlb
 }
 
-void increfcount(uint64 pa) {
+void increfcount(uint64 pa)
+{
     acquire(&refcountlock);
     refcount[refindex(pa)]++;
     release(&refcountlock);
