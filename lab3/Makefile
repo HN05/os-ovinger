@@ -140,6 +140,7 @@ UPROGS=\
 	$U/_schedset\
 	$U/_cowtest\
 	$U/_vatopa\
+	$U/_mmaptest\
 	
 
 fs.img: mkfs/mkfs README $(UPROGS) $U/load.sh

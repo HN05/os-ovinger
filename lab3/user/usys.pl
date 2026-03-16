@@ -41,3 +41,4 @@ entry("schedls");
 entry("schedset");
 entry("va2pa");
 entry("pfreepages");
+entry("mmap");

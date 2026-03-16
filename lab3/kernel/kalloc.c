@@ -25,7 +25,7 @@ struct spinlock refcountlock;
 int
 refindex(uint64 pa)
 {
-    if (pa < end || pa >= PHYSTOP)
+    if (pa < (uint64) end || pa >= PHYSTOP)
         panic("refindex out of range");
 
     return (pa - KERNBASE) / PGSIZE;
@@ -159,7 +159,6 @@ void cow_triggered(pte_t *pte)
         // make normal write
         *pte = (*pte & ~PTE_COW) | PTE_W;
     } 
-    sfence_vma(); // flush tlb
 }
 
 void increfcount(uint64 pa)

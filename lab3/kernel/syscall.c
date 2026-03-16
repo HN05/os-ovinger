@@ -102,6 +102,7 @@ extern uint64 sys_schedls(void);
 extern uint64 sys_schedset(void);
 extern uint64 sys_va2pa(void);
 extern uint64 sys_pfreepages(void);
+extern uint64 sys_mmap(void);
 
 // An array mapping syscall numbers from syscall.h
 // to the function that handles the system call.
@@ -132,6 +133,7 @@ static uint64 (*syscalls[])(void) = {
     [SYS_schedset] sys_schedset,
     [SYS_pfreepages] sys_pfreepages,
     [SYS_va2pa] sys_va2pa,
+    [SYS_mmap] sys_mmap,
 };
 
 void syscall(void)

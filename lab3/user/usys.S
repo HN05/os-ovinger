@@ -130,3 +130,8 @@ pfreepages:
  li a7, SYS_pfreepages
  ecall
  ret
+.global mmap
+mmap:
+ li a7, SYS_mmap
+ ecall
+ ret

@@ -317,9 +317,8 @@ uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
     pa = PTE2PA(*pte);
     increfcount(pa);
 
-    // make cow
-    if (*pte & PTE_W)
-    {
+    if (!(*pte & PTE_S) && (*pte & PTE_W)) {
+      // make cow
       *pte = (*pte & ~PTE_W) | PTE_COW;
     }
     
@@ -455,4 +454,51 @@ uint64 transvirt(uint64 vaddr, pagetable_t pagetable)
   uint64 pagenum = PTE2PA(pagetable[PX(0, vaddr)]);
   uint64 offset = vaddr & 0xFFF;
   return pagenum | offset;
+}
+
+int mmap_shared(uint64 vaddr, int npages, pagetable_t pagetable, int protocol)
+{
+  uint64 end = vaddr + npages * PGSIZE;
+  for (uint64 va = vaddr; va < end; va += PGSIZE)
+  {
+    pte_t *pte = walk(pagetable, va, 0);
+    if (pte == 0 || !(*pte & PTE_V)) {
+      return 1;
+    }
+
+    if (*pte & PTE_COW) {
+      cow_triggered(pte);
+    }
+
+    uint flags = PTE_FLAGS(*pte);
+    flags |= PTE_S;
+
+    if (protocol & PROT_READ) {
+      if (!(flags & PTE_R)) {
+        return 2; // can't make non readable page into readable
+      }
+    } else {
+      flags &= ~PTE_R; // make non readable
+    }
+
+    if (protocol & PROT_WRITE) {
+      if (!(flags & PTE_W)) {
+        return 3; // can't make non writeable page into writable
+      }
+    } else {
+      flags &= ~PTE_W; // make non writable
+    }
+
+    if (protocol & PROT_EXEC) {
+      if (!(flags & PTE_X)) {
+        return 4; // can't make non exec page into exec
+      }
+    } else {
+      flags &= ~PTE_X; // make non exec
+    }
+
+    *pte = PA2PTE(PTE2PA(*pte)) | flags;
+  }
+
+  return 0;
 }

@@ -76,7 +76,7 @@ usertrap(void)
     // do not need p->lock, since in trap
 
     pte_t *pte = walk(p->pagetable, va, 0);
-    if (!pte) {
+    if (!pte || !(*pte & PTE_V)) {
       // does not have va mapped
       printf("tried to write to page not mapped pid=%d", p->pid);
       printf("            sepc=%p stval=%p\n", r_sepc(), r_stval());

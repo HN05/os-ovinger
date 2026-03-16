@@ -842,13 +842,13 @@ uint64 transvirtproc(uint64 vaddr, int pid) {
     int found = 0;
     for (p = proc; p < &proc[NPROC]; p++)
     {
-	acquire(&p->lock);
-	found = p->pid == pid && p->state != UNUSED; 
-	release(&p->lock);
-	if (found) break;
+        acquire(&p->lock);
+        found = p->pid == pid && p->state != UNUSED; 
+        release(&p->lock);
+        if (found) break;
     }
     if (!found) {
-	return 0;
+        return 0;
     }
 
     pagetable_t pagetable = p->pagetable;
