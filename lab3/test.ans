@@ -36,22 +36,44 @@ riscv64-linux-gnu-objdump -t kernel/kernel | sed '1,/SYMBOL TABLE/d; s/ .* / /; 
 make[1]: Leaving directory '/home/lab/ovinger/lab3'
 == Test [MANDATORY] vatopa exists == 
 $ make qemu-gdb
-[MANDATORY] vatopa exists: [32mOK[0m (1.7s) 
+[MANDATORY] vatopa exists: [32mOK[0m (1.8s) 
 == Test [MANDATORY] vatopa 0 == 
 $ make qemu-gdb
-[MANDATORY] vatopa 0: [32mOK[0m (0.9s) 
+[MANDATORY] vatopa 0: [32mOK[0m (0.8s) 
 == Test [MANDATORY] vatopa 0 1 matches == 
 $ make qemu-gdb
 [32m			Matching OK[0m
 [MANDATORY] vatopa 0 1 matches: [32mOK[0m (1.0s) 
 == Test [MANDATORY] cowtest no crash == 
 $ make qemu-gdb
-Timeout! [MANDATORY] cowtest no crash: [31mFAIL[0m (30.7s) 
-    ...
-         [prnt] v1 --> 16147
-         kernel/kalloc.c@kalloc:79
-    [31mBAD [0m panic: assert failed
-         qemu-system-riscv64: terminating on signal 15 from pid 11879 (make)
-    unexpected lines in output
-    QEMU output saved to xv6.out.
+[MANDATORY] cowtest no crash: [32mOK[0m (6.5s) 
 == Test [MANDATORY] cowtest 1 match addresses == 
+$ make qemu-gdb
+[32m			Matching OK[0m
+[32m			Matching OK[0m
+[MANDATORY] cowtest 1 match addresses: [32mOK[0m (5.8s) 
+== Test [MANDATORY] cowtest 2 match addresses == 
+$ make qemu-gdb
+[32m			Matching OK[0m
+[32m			Matching OK[0m
+[32m			Matching OK[0m
+[MANDATORY] cowtest 2 match addresses: [32mOK[0m (5.8s) 
+== Test [MANDATORY] cowtest 3 match addresses == 
+$ make qemu-gdb
+[32m			Matching OK[0m
+[32m			Matching OK[0m
+[32m			Matching OK[0m
+[32m			Matching OK[0m
+[MANDATORY] cowtest 3 match addresses: [32mOK[0m (5.8s) 
+== Test [MANDATORY] cowtest 4 match addresses == 
+$ make qemu-gdb
+[32m			Matching OK[0m
+[32m			Matching OK[0m
+[32m			Matching OK[0m
+[MANDATORY] cowtest 4 match addresses: [31mFAIL[0m (5.8s) 
+    [31mRESULT NOT MATCHED[0m
+    83F0D010
+    87F3E010
+    87F3E010
+    QEMU output saved to xv6.out.
+Passed 7 out of 8 tests

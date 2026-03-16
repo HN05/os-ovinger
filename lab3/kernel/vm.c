@@ -316,10 +316,12 @@ uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
       panic("uvmcopy: page not present");
     pa = PTE2PA(*pte);
 
+    increfcount(pa);
+
     if (*pte & PTE_W)
     {
 	*pte &= ~PTE_W; // remove write access
-	*pte |= PTE_COW;
+	*pte |= PTE_COW; // set copy on write
     }
     
     flags = PTE_FLAGS(*pte);

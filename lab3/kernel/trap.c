@@ -65,33 +65,52 @@ usertrap(void)
     intr_on();
 
     syscall();
-  } else if((which_dev = devintr()) != 0){
-    // ok
   } else if (r_scause() == 15) {
+    // illegal write
     uint64 va = PGROUNDDOWN(r_stval());
+
+    // get proc inf
     acquire(&p->lock);
     pagetable_t pgtable = p->pagetable;
     int pid = p->pid;
     release(&p->lock);
+
     pte_t *pgentry = walk(pgtable, va, 0);
-    if (PTE_COW & *pgentry)
+    if (!pgentry) {
+      panic("todo");
+    }
+    int isCOW = PTE_COW & *pgentry;
+
+    if (isCOW)
     {
-      uint64 pa = transvirtproc(va, pid);
-      int refcount = getrefcount(pa);
+      // set normal write
       *pgentry &= ~PTE_COW;
       *pgentry |= PTE_W;
+
+      uint64 pa = transvirtproc(va, pid);
+      int refcount = getrefcount(pa);
+
+      // check if need to copy to new page
       if (refcount > 1) {
 	decrefcount(pa);
+
+	// get new page
 	void* new = kalloc();
 	if (new == 0)
 	{
-	  panic("hello");
+	  panic("todo");
 	}
+	
+	// copy to new page
 	memmove(new, (void*) pa, PGSIZE);
+
+	// update pte
 	uint flags = PTE_FLAGS(*pgentry);
 	*pgentry = PA2PTE(new) | flags;
       }
     }
+  } else if((which_dev = devintr()) != 0){
+    // ok
   } else {
     printf("usertrap(): unexpected scause %p pid=%d\n", r_scause(), p->pid);
     printf("            sepc=%p stval=%p\n", r_sepc(), r_stval());

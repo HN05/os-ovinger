@@ -1,2 +1,15 @@
-*.out*
-__pycache*
+# build files
+*.o
+*.d
+
+# binaries
+*.out
+*.elf
+
+# qemu output
+*.img
+*.log
+
+# editor junk
+*~
+*.swp

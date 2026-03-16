@@ -46,13 +46,27 @@ refindex(uint64 pa)
 int
 getrefcount(uint64 pa)
 {
-    return refcount[refindex(pa)];
+    int count;
+    acquire(&refcountlock);
+    count = refcount[refindex(pa)];
+    release(&refcountlock);
+    return count;
 }
 
 void
 decrefcount(uint64 pa)
 {
+    acquire(&refcountlock);
     refcount[refindex(pa)]--;
+    release(&refcountlock);
+}
+
+void
+increfcount(uint64 pa)
+{
+    acquire(&refcountlock);
+    refcount[refindex(pa)]++;
+    release(&refcountlock);
 }
 
 void kinit()
