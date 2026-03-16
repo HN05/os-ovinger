@@ -12,10 +12,12 @@
 uint64 MAX_PAGES = 0;
 uint64 FREE_PAGES = 0;
 
+
 void freerange(void *pa_start, void *pa_end);
 
 extern char end[]; // first address after kernel.
                    // defined by kernel.ld.
+		
 
 struct run
 {
@@ -28,9 +30,24 @@ struct
     struct run *freelist;
 } kmem;
 
+#define NPAGES ((PHYSTOP-KERNBASE)/PGSIZE)
+struct spinlock refcountlock;
+int refcount[NPAGES];
+
+int
+refindex(void *pa)
+{
+    if (((uint64)pa % PGSIZE) != 0 || (uint64)pa < KERNBASE || (uint64)pa >= PHYSTOP)
+        panic("refindex");
+
+    return ((uint64) pa - KERNBASE) / PGSIZE;
+}
+
+
 void kinit()
 {
     initlock(&kmem.lock, "kmem");
+    initlock(&refcountlock, "refcount");
     freerange(end, (void *)PHYSTOP);
     MAX_PAGES = FREE_PAGES;
 }
@@ -57,6 +74,20 @@ void kfree(void *pa)
 
     if (((uint64)pa % PGSIZE) != 0 || (char *)pa < end || (uint64)pa >= PHYSTOP)
         panic("kfree");
+
+    // decrement refcount
+
+    int i = refindex(pa);
+    int empty;
+
+    acquire(&refcountlock);
+    if (refcount[i] > 0) refcount[i]--;
+    empty = refcount[i] == 0;
+    release(&refcountlock);
+
+    if (!empty) return;
+
+    // Remove page
 
     // Fill with junk to catch dangling refs.
     memset(pa, 1, PGSIZE);
@@ -88,5 +119,12 @@ kalloc(void)
     if (r)
         memset((char *)r, 5, PGSIZE); // fill with junk
     FREE_PAGES--;
+
+    int i = refindex((void*) r);
+    acquire(&refcountlock);
+    refcount[i] = 1;
+    release(&refcountlock);
+
     return (void *)r;
 }
+
