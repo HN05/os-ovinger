@@ -190,7 +190,7 @@ int copyout(pagetable_t, uint64, char *, uint64);
 int copyin(pagetable_t, char *, uint64, uint64);
 int copyinstr(pagetable_t, char *, uint64, uint64);
 uint64 transvirt(uint64 vaddr, pagetable_t pagetable);
-int mmap_shared(uint64 vaddr, int npages, pagetable_t pagetable, int protocol);
+int mmap(uint64 vaddr, int npages, pagetable_t pagetable, int protocol, struct file *file);
 
 // plic.c
 void plicinit(void);

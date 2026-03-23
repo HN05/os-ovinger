@@ -138,13 +138,3 @@ uint64 sys_pfreepages(void)
     return 0;
 }
 
-uint64 sys_mmap(void)
-{
-    uint64 vaddr;
-    int npages;
-    int protocol;
-    argaddr(0, &vaddr);
-    argint(1, &npages);
-    argint(2, &protocol);
-    return mmap_shared(vaddr, npages, myproc()->pagetable, protocol);
-}

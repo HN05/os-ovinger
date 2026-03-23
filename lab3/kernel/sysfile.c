@@ -503,3 +503,17 @@ sys_pipe(void)
   }
   return 0;
 }
+
+uint64 sys_mmap(void)
+{
+    uint64 vaddr;
+    int npages;
+    int protocol;
+    struct file *file = 0;
+    argaddr(0, &vaddr);
+    argint(1, &npages);
+    argint(2, &protocol);
+    argfd(3, 0, &file);
+
+    return mmap(vaddr, npages, myproc()->pagetable, protocol, file);
+}

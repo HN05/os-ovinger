@@ -456,9 +456,9 @@ uint64 transvirt(uint64 vaddr, pagetable_t pagetable)
   return pagenum | offset;
 }
 
-int mmap_shared(uint64 vaddr, int npages, pagetable_t pagetable, int protocol)
+int mmap(uint64 vaddr, int npages, pagetable_t pagetable, int protocol, struct file *file)
 {
-  uint64 end = vaddr + npages * PGSIZE;
+  uint64 end = PGROUNDDOWN(vaddr + npages * PGSIZE);
   for (uint64 va = vaddr; va < end; va += PGSIZE)
   {
     pte_t *pte = walk(pagetable, va, 0);
@@ -466,12 +466,22 @@ int mmap_shared(uint64 vaddr, int npages, pagetable_t pagetable, int protocol)
       return 1;
     }
 
-    if (*pte & PTE_COW) {
+    if (*pte & PTE_COW && (protocol & PROT_SHARE || protocol & PROT_WRITE || file)) {
       cow_triggered(pte);
     }
 
     uint flags = PTE_FLAGS(*pte);
-    flags |= PTE_S;
+
+    if (file) {
+      if (!(flags & PTE_R && flags & PTE_W)) {
+        return 5; // cant map file to non read/write mem
+      }
+      fileread(file, va, PGROUNDDOWN(va + PGSIZE) - va);
+    }
+
+    if (protocol & PROT_SHARE) {
+      flags |= PTE_S;
+    }
 
     if (protocol & PROT_READ) {
       if (!(flags & PTE_R)) {
