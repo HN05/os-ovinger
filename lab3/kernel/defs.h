@@ -81,7 +81,7 @@ void begin_op(void);
 void end_op(void);
 
 // mmap.c
-int is_lazy_page(uint64 va);
+int mfile_lookup(uint64 va);
 int pop_vma(int fd);
 int pop_vma_single(int fd, uint64 va);
 int msync(int fd);

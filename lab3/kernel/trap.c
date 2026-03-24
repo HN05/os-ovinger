@@ -75,9 +75,10 @@ usertrap(void)
 
     // do not need p->lock, since in trap
 
-    int fd = is_lazy_page(va);
+    int fd = mfile_lookup(va);
+    int status = -1;
     if (fd != -1)
-        pop_vma_single(fd, va);
+        status = pop_vma_single(fd, va);
 
 
     pte_t *pte = walk(p->pagetable, va, 0);
@@ -92,7 +93,7 @@ usertrap(void)
     if (isCOW && r_scause() == 15)
     {
       cow_triggered(pte);
-    } else if (fd == -1) {
+    } else if (status != 0) {
       printf("illegal thing, bad program pid=%d", p->pid);
       printf("            sepc=%p stval=%p\n", r_sepc(), r_stval());
       setkilled(p);

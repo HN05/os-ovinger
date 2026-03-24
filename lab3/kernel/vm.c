@@ -311,7 +311,7 @@ uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
   for(i = 0; i < sz; i += PGSIZE){
     if((pte = walk(old, i, 0)) == 0)
       panic("uvmcopy: pte should exist");
-    if((*pte & PTE_V) == 0 && is_lazy_page(i) < 0)
+    if(!(*pte & PTE_V) && mfile_lookup(i) == -1)
         panic("uvmcopy: page not present");
 
     pa = PTE2PA(*pte);

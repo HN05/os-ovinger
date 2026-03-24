@@ -9,21 +9,30 @@
 #include "proc.h"
 #include "mmap.h"
 
-#define MMAP_END(start, npages) (PGROUNDDOWN(start + npages*PGSIZE))
+#define MMAP_END(start, npages) (PGROUNDDOWN((start) + (npages) * PGSIZE))
 
-int is_lazy_page(uint64 va) {
-  pte_t *pte = walk(myproc()->pagetable, va, 0);
-  if (!(*pte & PTE_V)) {
-    for (int fd = 0; fd < NOFILE; fd++) {
-      vm_area *mfile = &myproc()->mfiles[fd];
-      if (mfile->flags & VMA_VALID && !(mfile->flags & VMA_READ)) {
-        if (mfile->start <= va && va < MMAP_END(mfile->start, mfile->npages)) {
-          return fd;
-        }
+int mfile_lookup(uint64 va) {
+  vm_area *mfiles = myproc()->mfiles;
+  for (int fd = 0; fd < NOFILE; fd++) {
+    vm_area *mfile = &mfiles[fd];
+    if (mfile->flags & VMA_VALID) {
+      if (mfile->start <= va && va < MMAP_END(mfile->start, mfile->npages)) {
+        return fd;
       }
-    } 
+    }
+  } 
+  return -1; // no vma found
+}
+
+static void page_in(uint64 va, struct file *file, pagetable_t table) {
+  pte_t *pte = walk(table, va, 0);
+  if (!(*pte & PTE_V)) {
+     *pte |= PTE_V;
+     fileread(file, va, PAGE_LEFT(va));
+     *pte &= ~PTE_D; 
+  } else {
+    file->off += PAGE_LEFT(va);
   }
-  return -1;
 }
 
 // load page for that va
@@ -31,6 +40,9 @@ int pop_vma_single(int fd, uint64 va) {
   vm_area *mfile = &myproc()->mfiles[fd];
   if (!(mfile->flags & VMA_VALID)) {
     return 1;
+  }
+  if (mfile->flags & VMA_READ) {
+    return 4;
   }
   struct file *file = myproc()->ofile[fd];
   if (!file) {
@@ -45,16 +57,14 @@ int pop_vma_single(int fd, uint64 va) {
   file->off = mfile->offset;
 
   pagetable_t table = myproc()->pagetable;
-  pte_t *pte = walk(table, va, 0);
-  *pte |= PTE_V;
-  if (va < PGROUNDDOWN(mfile->start + PGSIZE)) {
+
+  if (va < MMAP_END(mfile->start, 1)) {
     // first page
-    fileread(file, mfile->start, PAGE_LEFT(mfile->start));
+    page_in(mfile->start, file, table);
   } else {
     file->off += PGROUNDDOWN(va) - mfile->start;
-    fileread(file, PGROUNDDOWN(va), PGSIZE);
+    page_in(PGROUNDDOWN(va), file, table);
   }
-  *pte &= ~PTE_D;
 
   file->off = bef;
   return 0;
@@ -82,19 +92,22 @@ int pop_vma(int fd) {
 
   for (uint64 va = mfile->start; va < MMAP_END(mfile->start, mfile->npages); va += PGSIZE)
   {
-    pte_t *pte = walk(table, va, 0);
-    if (!(*pte & PTE_V)) {
-       *pte |= PTE_V;
-       fileread(file, va, PAGE_LEFT(va));
-       *pte &= ~PTE_D; 
-    } else {
-      file->off += PAGE_LEFT(va);
-    }
+    page_in(va, file, table);
   }
 
   mfile->flags |= VMA_READ;
   file->off = bef;
   return 0;
+}
+
+static void page_out(uint64 va, struct file *file, pagetable_t table) {
+  pte_t *pte = walk(table, va, 0);
+  if (*pte & PTE_D && *pte & PTE_V) {
+     filewrite(file, va, PAGE_LEFT(va));
+     *pte &= ~PTE_D; 
+  } else {
+    file->off += PAGE_LEFT(va);
+  }
 }
 
 int msync(int fd) {
@@ -122,13 +135,7 @@ int msync(int fd) {
 
   for (uint64 va = mfile->start; va < MMAP_END(mfile->start, mfile->npages); va += PGSIZE)
   {
-    pte_t *pte = walk(table, va, 0);
-    if (*pte & PTE_D && *pte & PTE_V) {
-       filewrite(file, va, PAGE_LEFT(va));
-       *pte &= ~PTE_D; 
-    } else {
-      file->off += PAGE_LEFT(va);
-    }
+    page_out(va, file, table);
   }
 
   file->off = bef;
@@ -144,9 +151,12 @@ int mmap(uint64 vaddr, int npages, pagetable_t pagetable, int protocol, int lazy
       return 1;
     }
     if (!(*pte & PTE_V)) {
-      int fd = is_lazy_page(va);
+      int fd = mfile_lookup(va);
       if (fd != -1) {
-        pop_vma_single(fd, va);
+        int status = pop_vma_single(fd, va);
+        if (status != 0) {
+          return 14;
+        }
       } else {
         return 13;
       }
