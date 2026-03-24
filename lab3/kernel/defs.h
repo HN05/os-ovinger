@@ -9,6 +9,7 @@ struct spinlock;
 struct sleeplock;
 struct stat;
 struct superblock;
+struct writeback;
 
 #define assert(cond)                                        \
     if (!(cond))                                            \
@@ -41,7 +42,9 @@ void fileinit(void);
 int fileread(struct file *, uint64, int n);
 int filestat(struct file *, uint64 addr);
 int filewrite(struct file *, uint64, int n);
-int msync(int fd, struct file *file);
+int is_writeback(uint64 va);
+int msync_read(int fd, uint64 va);
+int msync(int fd);
 
 // fs.c
 void fsinit(int);

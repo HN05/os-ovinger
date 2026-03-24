@@ -379,10 +379,26 @@ int fork(void)
     struct proc *np;
     struct proc *p = myproc();
 
+    // perform msync
+    for (i = 0; i < NOFILE; i++)
+    {
+        if (p->wb[i].flags & WB_VALID) {
+            msync(i);
+        }
+    }
+
     // Allocate process.
     if ((np = allocproc()) == 0)
     {
         return -1;
+    }
+
+    // copy writeback
+    for (i = 0; i < NOFILE; i++)
+    {
+        if (p->wb[i].flags & WB_VALID) {
+            np->wb[i] = p->wb[i];
+        }
     }
 
     // Copy user memory from parent to child.
@@ -402,12 +418,9 @@ int fork(void)
 
     // increment reference counts on open file descriptors.
     for (i = 0; i < NOFILE; i++)
-    {
         if (p->ofile[i])
             np->ofile[i] = filedup(p->ofile[i]);
-        if (p->wb[i].valid)
-            np->wb[i] = p->wb[i];
-    }
+
     np->cwd = idup(p->cwd);
 
     safestrcpy(np->name, p->name, sizeof(p->name));
@@ -459,8 +472,9 @@ void exit(int status)
         if (p->ofile[fd])
         {
             struct file *f = p->ofile[fd];
-            if (p->wb[fd].valid) {
-                msync(fd, f);
+            if (p->wb[fd].flags & WB_VALID) {
+                msync(fd);
+                p->wb[fd].flags = 0;
             }
             fileclose(f);
             p->ofile[fd] = 0;

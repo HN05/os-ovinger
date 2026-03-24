@@ -65,31 +65,34 @@ usertrap(void)
     intr_on();
 
     syscall();
-  } else if (r_scause() == 15) {
-    // illegal write
-    
+
+  } else if (r_scause() == 13 || r_scause() == 12 || r_scause() == 15) {
     if(killed(p))
       exit(-1);
 
-    uint64 va = PGROUNDDOWN(r_stval());
+    uint64 va = r_stval();
 
     // do not need p->lock, since in trap
+
+    int fd = is_writeback(va);
+    if (fd != -1)
+        msync_read(fd, va);
+
 
     pte_t *pte = walk(p->pagetable, va, 0);
     if (!pte || !(*pte & PTE_V)) {
       // does not have va mapped
-      printf("tried to write to page not mapped pid=%d", p->pid);
+      printf("tried to access page not mapped pid=%d", p->pid);
       printf("            sepc=%p stval=%p\n", r_sepc(), r_stval());
       setkilled(p);
     }
 
     int isCOW = PTE_COW & *pte;
-
-    if (isCOW)
+    if (isCOW && r_scause() == 15)
     {
       cow_triggered(pte);
-    } else {
-      printf("illegal write pid=%d", p->pid);
+    } else if (fd == -1) {
+      printf("illegal thing, bad program pid=%d", p->pid);
       printf("            sepc=%p stval=%p\n", r_sepc(), r_stval());
       setkilled(p);
     }

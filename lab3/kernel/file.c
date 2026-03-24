@@ -180,31 +180,83 @@ filewrite(struct file *f, uint64 addr, int n)
   return ret;
 }
 
-int msync(int fd, struct file *file) {
-  writeback wb = myproc()->wb[fd];
-  if (wb.valid != 1) {
+int is_writeback(uint64 va) {
+  pte_t *pte = walk(myproc()->pagetable, va, 0);
+  if (!(*pte & PTE_V)) {
+    for (int fd = 0; fd < NOFILE; fd++) {
+      writeback *wb = &myproc()->wb[fd];
+      if (wb->flags & WB_VALID && !(wb->flags & WB_READ)) {
+        if (wb->start <= va && va < PGROUNDDOWN(wb->start + wb->npages*PGSIZE)) {
+          return fd;
+        }
+      }
+    } 
+  }
+  return -1;
+}
+
+// load page for that va
+int msync_read(int fd, uint64 va) {
+  struct writeback *wb = &myproc()->wb[fd];
+  struct file *file = myproc()->ofile[fd];
+
+  int bef = file->off;
+  file->off = wb->offset;
+
+  pagetable_t table = myproc()->pagetable;
+  pte_t *pte = walk(table, va, 0);
+  *pte |= PTE_V;
+  if (va < PGROUNDDOWN(wb->start + PGSIZE)) {
+    // first page
+    fileread(file, wb->start, PGROUNDDOWN(wb->start+PGSIZE) - wb->start);
+  } else {
+    file->off += PGROUNDDOWN(va) - wb->start;
+    fileread(file, PGROUNDDOWN(va), PGSIZE);
+  }
+  *pte &= ~PTE_D;
+
+  file->off = bef;
+  return 0;
+}
+
+int msync(int fd) {
+  writeback *wb = &myproc()->wb[fd];
+  if (!(wb->flags & WB_VALID)) {
     return 1;
   }
 
-  int bef = file->off;
-  file->off = wb.offset;
+  struct file *file = myproc()->ofile[fd];
+  if (!file) {
+    return 2;
+  }
+  
+  // should not propogate
+  if (!(wb->flags & WB_PROP)) {
+    wb->flags = 0;
+    return 0;
+  }
 
-  uint64 va = wb.start;
+  // writeback
+
+  int bef = file->off;
+  file->off = wb->offset;
+
+  uint64 va = wb->start;
 
   // first page
   pagetable_t table = myproc()->pagetable;
   pte_t *pte = walk(table, va, 0);
-  if (*pte & PTE_D) {
+  if (*pte & PTE_D && *pte & PTE_V) {
     filewrite(file, va, PGROUNDDOWN(va+PGSIZE) - va);
     *pte &= ~PTE_D; 
   } else {
     file->off += PGROUNDUP(va) - va;
   }
 
-  for (va = PGROUNDDOWN(va+PGSIZE); va < PGROUNDDOWN(wb.start + wb.npages*PGSIZE); va += PGSIZE)
+  for (va = PGROUNDDOWN(va+PGSIZE); va < PGROUNDDOWN(wb->start + wb->npages*PGSIZE); va += PGSIZE)
   {
     pte_t *pte = walk(table, va, 0);
-    if (*pte & PTE_D) {
+    if (*pte & PTE_D && *pte & PTE_V) {
        filewrite(file, va, PGSIZE);
        *pte &= ~PTE_D; 
     } else {

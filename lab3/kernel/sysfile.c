@@ -517,20 +517,30 @@ uint64 sys_mmap(void)
   argint(2, &protocol);
   argfd(3, &fd, &file);
 
-  int offset = file->off;
+  int offset;
+  if (file) {
+    offset = file->off;
+  }
 
   int status = mmap(vaddr, npages, myproc()->pagetable, protocol, file);
   if (status != 0) {
     return status;
   }
+
   // map writeback
-  if (file && (protocol & PROT_PROP)) {
+  if (file) {
+    msync(fd);
+
     writeback *wb = &myproc()->wb[fd];
-    wb->valid = 1;
+
+    wb->flags = WB_VALID;
+    if ((protocol & PROT_PROP) != 0)
+      wb->flags |= WB_PROP;
+
     wb->npages = npages;
     wb->start = vaddr;
     wb->offset = offset;
-  }
+  } 
   return 0;
 }
 
@@ -539,5 +549,8 @@ uint64 sys_msync(void)
   int fd;
   struct file *file;
   argfd(0, &fd, &file);
-  return msync(fd, file);
+  if (!file) {
+    return 4;
+  }
+  return msync(fd);
 }

@@ -124,10 +124,10 @@ uint64 sys_va2pa(void)
     argaddr(0, &vaddr);
     argint(1, &pid);
     if (pid == 0) {
-	struct proc *p = myproc();
-	acquire(&p->lock);
-	pid = p->pid;
-	release(&p->lock);
+        struct proc *p = myproc();
+        acquire(&p->lock);
+        pid = p->pid;
+        release(&p->lock);
     }
     return transvirtproc(vaddr, pid);
 }

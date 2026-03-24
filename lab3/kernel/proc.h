@@ -92,11 +92,15 @@ enum procstate
     ZOMBIE
 };
 
+#define WB_VALID (1L << 0)
+#define WB_PROP (1L << 1)
+#define WB_READ (1L << 2)
+
 typedef struct writeback {
     uint64 start;
     int npages;
     int offset;
-    int valid;
+    int flags; 
 } writeback;
 
 

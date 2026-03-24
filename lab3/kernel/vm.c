@@ -306,13 +306,19 @@ int
 uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
 {
   pte_t *pte;
+  int fd;
   uint64 pa, i;
 
   for(i = 0; i < sz; i += PGSIZE){
     if((pte = walk(old, i, 0)) == 0)
       panic("uvmcopy: pte should exist");
-    if((*pte & PTE_V) == 0)
-      panic("uvmcopy: page not present");
+    if((*pte & PTE_V) == 0) {
+      if ((fd = is_writeback(i)) != -1) {
+        msync_read(fd, i);
+      } else {
+        panic("uvmcopy: page not present");
+      }
+    }
 
     pa = PTE2PA(*pte);
     increfcount(pa);
@@ -462,24 +468,32 @@ int mmap(uint64 vaddr, int npages, pagetable_t pagetable, int protocol, struct f
   for (uint64 va = vaddr; va < end; va += PGSIZE)
   {
     pte_t *pte = walk(pagetable, va, 0);
-    if (pte == 0 || !(*pte & PTE_V)) {
+    if (pte == 0) {
       return 1;
     }
+    if (!(*pte & PTE_V)) {
+      int fd = is_writeback(va);
+      if (fd != -1) {
+        msync_read(fd, va);
+      } else {
+        return 13;
+      }
+    }
 
-    if (*pte & PTE_COW && (protocol & PROT_SHARE || protocol & PROT_WRITE || file)) {
+    if (*pte & PTE_COW && (protocol & PROT_SHARE && protocol & PROT_WRITE)) {
       cow_triggered(pte);
     }
 
     uint flags = PTE_FLAGS(*pte);
 
     // unset dirty bit
-    *pte &= ~PTE_D;
+    flags &= ~PTE_D;
 
     if (file) {
       if (!(flags & PTE_R && flags & PTE_W)) {
         return 5; // cant map file to non read/write mem
       }
-      fileread(file, va, PGROUNDDOWN(va + PGSIZE) - va);
+      flags &= ~PTE_V;
     }
 
     if (protocol & PROT_SHARE) {
