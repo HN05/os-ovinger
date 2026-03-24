@@ -16,6 +16,7 @@
 #include "file.h"
 #include "fcntl.h"
 #include "memlayout.h"
+#include "mmap.h"
 
 // Fetch the nth word-sized system call argument as a file descriptor
 // and return both the descriptor and the corresponding struct file.
@@ -107,7 +108,7 @@ sys_close(void)
   vm_area *mfile = &myproc()->mfiles[fd];
   if (mfile->flags & VMA_VALID) {
     msync(fd);
-    msync_read_all(fd);
+    pop_vma(fd);
     mfile->flags &= ~VMA_VALID;
   }
 
@@ -533,10 +534,10 @@ uint64 sys_mmap(void)
   // flush existing mapping
   if (file) {
     msync(fd);
-    msync_read_all(fd);
+    pop_vma(fd);
   }
 
-  int status = mmap(vaddr, npages, myproc()->pagetable, protocol, file);
+  int status = mmap(vaddr, npages, myproc()->pagetable, protocol, file != 0);
   if (status != 0) {
     return status;
   }
@@ -554,7 +555,7 @@ uint64 sys_mmap(void)
     mfile->offset = offset;
 
     if (protocol & PROT_POPULATE) {
-      msync_read_all(fd);
+      pop_vma(fd);
     }
   } 
   return 0;

@@ -65,12 +65,3 @@
 //   TRAPFRAME (p->trapframe, used by the trampoline)
 //   TRAMPOLINE (the same page as in the kernel)
 #define TRAPFRAME (TRAMPOLINE - PGSIZE)
-
-#define PROT_NONE (0)
-#define PROT_READ (1)
-#define PROT_WRITE (1 << 1)
-#define PROT_EXEC (1 << 2)
-#define PROT_SHARE (1 << 3)
-#define PROT_PROP (1 << 4)
-#define PROT_UNPROP (1 << 5)
-#define PROT_POPULATE (1 << 6)

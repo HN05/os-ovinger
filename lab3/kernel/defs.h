@@ -41,10 +41,6 @@ void fileinit(void);
 int fileread(struct file *, uint64, int n);
 int filestat(struct file *, uint64 addr);
 int filewrite(struct file *, uint64, int n);
-int islazypage(uint64 va);
-int msync_read_all(int fd);
-int msync_read(int fd, uint64 va);
-int msync(int fd);
 
 // fs.c
 void fsinit(int);
@@ -83,6 +79,13 @@ void initlog(int, struct superblock *);
 void log_write(struct buf *);
 void begin_op(void);
 void end_op(void);
+
+// mmap.c
+int is_lazy_page(uint64 va);
+int pop_vma(int fd);
+int pop_vma_single(int fd, uint64 va);
+int msync(int fd);
+int mmap(uint64 vaddr, int npages, pagetable_t pagetable, int protocol, int lazy);
 
 // pipe.c
 int pipealloc(struct file **, struct file **);
@@ -194,7 +197,6 @@ int copyout(pagetable_t, uint64, char *, uint64);
 int copyin(pagetable_t, char *, uint64, uint64);
 int copyinstr(pagetable_t, char *, uint64, uint64);
 uint64 transvirt(uint64 vaddr, pagetable_t pagetable);
-int mmap(uint64 vaddr, int npages, pagetable_t pagetable, int protocol, struct file *file);
 
 // plic.c
 void plicinit(void);

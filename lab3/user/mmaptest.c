@@ -4,6 +4,7 @@
 #include "kernel/riscv.h"
 #include "kernel/fcntl.h"
 #include "user/user.h"
+#include "kernel/mmap.h"
 
 #define NPAGES 3
 

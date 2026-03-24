@@ -75,9 +75,9 @@ usertrap(void)
 
     // do not need p->lock, since in trap
 
-    int fd = islazypage(va);
+    int fd = is_lazy_page(va);
     if (fd != -1)
-        msync_read(fd, va);
+        pop_vma_single(fd, va);
 
 
     pte_t *pte = walk(p->pagetable, va, 0);
