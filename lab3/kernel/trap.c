@@ -67,6 +67,7 @@ usertrap(void)
     syscall();
 
   } else if (r_scause() == 13 || r_scause() == 12 || r_scause() == 15) {
+    // illegal mem access
     if(killed(p))
       exit(-1);
 
@@ -74,7 +75,7 @@ usertrap(void)
 
     // do not need p->lock, since in trap
 
-    int fd = is_writeback(va);
+    int fd = islazypage(va);
     if (fd != -1)
         msync_read(fd, va);
 

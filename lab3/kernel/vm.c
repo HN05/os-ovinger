@@ -179,7 +179,7 @@ uvmunmap(pagetable_t pagetable, uint64 va, uint64 npages, int do_free)
   for(a = va; a < va + npages*PGSIZE; a += PGSIZE){
     if((pte = walk(pagetable, a, 0)) == 0)
       panic("uvmunmap: walk");
-    if((*pte & PTE_V) == 0)
+    if(*pte == 0)
       panic("uvmunmap: not mapped");
     if(PTE_FLAGS(*pte) == PTE_V)
       panic("uvmunmap: not a leaf");
@@ -306,19 +306,13 @@ int
 uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
 {
   pte_t *pte;
-  int fd;
   uint64 pa, i;
 
   for(i = 0; i < sz; i += PGSIZE){
     if((pte = walk(old, i, 0)) == 0)
       panic("uvmcopy: pte should exist");
-    if((*pte & PTE_V) == 0) {
-      if ((fd = is_writeback(i)) != -1) {
-        msync_read(fd, i);
-      } else {
+    if((*pte & PTE_V) == 0 && islazypage(i) < 0)
         panic("uvmcopy: page not present");
-      }
-    }
 
     pa = PTE2PA(*pte);
     increfcount(pa);
@@ -472,7 +466,7 @@ int mmap(uint64 vaddr, int npages, pagetable_t pagetable, int protocol, struct f
       return 1;
     }
     if (!(*pte & PTE_V)) {
-      int fd = is_writeback(va);
+      int fd = islazypage(va);
       if (fd != -1) {
         msync_read(fd, va);
       } else {

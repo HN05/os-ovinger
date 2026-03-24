@@ -379,7 +379,7 @@ int fork(void)
     struct proc *np;
     struct proc *p = myproc();
 
-    // perform msync
+    // perform msync writeback
     for (i = 0; i < NOFILE; i++)
     {
         if (p->wb[i].flags & WB_VALID) {
@@ -473,7 +473,7 @@ void exit(int status)
         {
             if (p->wb[fd].flags & WB_VALID) {
                 msync(fd);
-                p->wb[fd].flags = 0;
+                p->wb[fd].flags &= ~WB_VALID;
             }
             struct file *f = p->ofile[fd];
             fileclose(f);

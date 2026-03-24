@@ -180,7 +180,7 @@ filewrite(struct file *f, uint64 addr, int n)
   return ret;
 }
 
-int is_writeback(uint64 va) {
+int islazypage(uint64 va) {
   pte_t *pte = walk(myproc()->pagetable, va, 0);
   if (!(*pte & PTE_V)) {
     for (int fd = 0; fd < NOFILE; fd++) {
@@ -198,7 +198,17 @@ int is_writeback(uint64 va) {
 // load page for that va
 int msync_read(int fd, uint64 va) {
   struct writeback *wb = &myproc()->wb[fd];
+  if (!(wb->flags & WB_VALID)) {
+    return 1;
+  }
   struct file *file = myproc()->ofile[fd];
+  if (!file) {
+    return 2;
+  }
+
+  if (wb->flags & WB_READ) {
+    return 3;
+  }
 
   int bef = file->off;
   file->off = wb->offset;
@@ -219,6 +229,53 @@ int msync_read(int fd, uint64 va) {
   return 0;
 }
 
+int msync_read_all(int fd) {
+  struct writeback *wb = &myproc()->wb[fd];
+  if (!(wb->flags & WB_VALID)) {
+    return 1;
+  }
+  struct file *file = myproc()->ofile[fd];
+  if (!file) {
+    return 2;
+  }
+
+  if (wb->flags & WB_READ) {
+    return 3;
+  }
+
+  int bef = file->off;
+  file->off = wb->offset;
+
+  pagetable_t table = myproc()->pagetable;
+  uint64 va = wb->start;
+  pte_t *pte = walk(table, va, 0);
+
+  // first page
+  if (!(*pte & PTE_V)) {
+    *pte |= PTE_V;
+    fileread(file, va, PGROUNDDOWN(va+PGSIZE) - va);
+    *pte &= ~PTE_D; 
+  } else {
+    file->off += PGROUNDUP(va) - va;
+  }
+
+  for (va = PGROUNDDOWN(va+PGSIZE); va < PGROUNDDOWN(wb->start + wb->npages*PGSIZE); va += PGSIZE)
+  {
+    pte_t *pte = walk(table, va, 0);
+    if (!(*pte & PTE_V)) {
+       *pte |= PTE_V;
+       fileread(file, va, PGSIZE);
+       *pte &= ~PTE_D; 
+    } else {
+      file->off += PGSIZE;
+    }
+  }
+
+  wb->flags |= WB_READ;
+  file->off = bef;
+  return 0;
+}
+
 int msync(int fd) {
   writeback *wb = &myproc()->wb[fd];
   if (!(wb->flags & WB_VALID)) {
@@ -232,7 +289,6 @@ int msync(int fd) {
   
   // should not propogate
   if (!(wb->flags & WB_PROP)) {
-    wb->flags = 0;
     return 0;
   }
 

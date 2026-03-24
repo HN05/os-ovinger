@@ -42,7 +42,8 @@ void fileinit(void);
 int fileread(struct file *, uint64, int n);
 int filestat(struct file *, uint64 addr);
 int filewrite(struct file *, uint64, int n);
-int is_writeback(uint64 va);
+int islazypage(uint64 va);
+int msync_read_all(int fd);
 int msync_read(int fd, uint64 va);
 int msync(int fd);
 

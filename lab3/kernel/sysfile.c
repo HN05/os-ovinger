@@ -103,6 +103,14 @@ sys_close(void)
 
   if(argfd(0, &fd, &f) < 0)
     return -1;
+
+  writeback *wb = &myproc()->wb[fd];
+  if (wb->flags & WB_VALID) {
+    msync(fd);
+    msync_read_all(fd);
+    wb->flags &= ~WB_VALID;
+  }
+
   myproc()->ofile[fd] = 0;
   fileclose(f);
   return 0;
@@ -522,6 +530,12 @@ uint64 sys_mmap(void)
     offset = file->off;
   }
 
+  // flush existing mapping
+  if (file) {
+    msync(fd);
+    msync_read_all(fd);
+  }
+
   int status = mmap(vaddr, npages, myproc()->pagetable, protocol, file);
   if (status != 0) {
     return status;
@@ -529,8 +543,6 @@ uint64 sys_mmap(void)
 
   // map writeback
   if (file) {
-    msync(fd);
-
     writeback *wb = &myproc()->wb[fd];
 
     wb->flags = WB_VALID;
@@ -540,6 +552,10 @@ uint64 sys_mmap(void)
     wb->npages = npages;
     wb->start = vaddr;
     wb->offset = offset;
+
+    if (protocol & PROT_POPULATE) {
+      msync_read_all(fd);
+    }
   } 
   return 0;
 }
