@@ -471,11 +471,11 @@ void exit(int status)
     {
         if (p->ofile[fd])
         {
-            struct file *f = p->ofile[fd];
             if (p->wb[fd].flags & WB_VALID) {
                 msync(fd);
                 p->wb[fd].flags = 0;
             }
+            struct file *f = p->ofile[fd];
             fileclose(f);
             p->ofile[fd] = 0;
         }
