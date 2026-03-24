@@ -9,7 +9,6 @@ struct spinlock;
 struct sleeplock;
 struct stat;
 struct superblock;
-struct writeback;
 
 #define assert(cond)                                        \
     if (!(cond))                                            \

@@ -92,16 +92,16 @@ enum procstate
     ZOMBIE
 };
 
-#define WB_VALID (1L << 0)
-#define WB_PROP (1L << 1)
-#define WB_READ (1L << 2)
+#define VMA_VALID (1L << 0)
+#define VMA_PROP (1L << 1)
+#define VMA_READ (1L << 2)
 
-typedef struct writeback {
+typedef struct vm_area {
     uint64 start;
     int npages;
     int offset;
     int flags; 
-} writeback;
+} vm_area;
 
 
 struct user_proc
@@ -136,7 +136,7 @@ struct proc
     struct trapframe *trapframe; // data page for trampoline.S
     struct context context;      // swtch() here to run process
     struct file *ofile[NOFILE];  // Open files
-    writeback wb[NOFILE]; // writeback to file
+    vm_area mfiles[NOFILE];      // files in memory
     struct inode *cwd;           // Current directory
     char name[16];               // Process name (debugging)
 };

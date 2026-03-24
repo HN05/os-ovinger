@@ -104,11 +104,11 @@ sys_close(void)
   if(argfd(0, &fd, &f) < 0)
     return -1;
 
-  writeback *wb = &myproc()->wb[fd];
-  if (wb->flags & WB_VALID) {
+  vm_area *mfile = &myproc()->mfiles[fd];
+  if (mfile->flags & VMA_VALID) {
     msync(fd);
     msync_read_all(fd);
-    wb->flags &= ~WB_VALID;
+    mfile->flags &= ~VMA_VALID;
   }
 
   myproc()->ofile[fd] = 0;
@@ -541,17 +541,17 @@ uint64 sys_mmap(void)
     return status;
   }
 
-  // map writeback
+  // map mfile
   if (file) {
-    writeback *wb = &myproc()->wb[fd];
+    vm_area *mfile = &myproc()->mfiles[fd];
 
-    wb->flags = WB_VALID;
+    mfile->flags = VMA_VALID;
     if ((protocol & PROT_PROP) != 0)
-      wb->flags |= WB_PROP;
+      mfile->flags |= VMA_PROP;
 
-    wb->npages = npages;
-    wb->start = vaddr;
-    wb->offset = offset;
+    mfile->npages = npages;
+    mfile->start = vaddr;
+    mfile->offset = offset;
 
     if (protocol & PROT_POPULATE) {
       msync_read_all(fd);

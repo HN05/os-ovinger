@@ -180,13 +180,17 @@ filewrite(struct file *f, uint64 addr, int n)
   return ret;
 }
 
+
+#define MMAP_END(start, npages) PGROUNDDOWN(start + npages*PGSIZE)
+#define PAGE_LEFT(addr) (PGROUNDDOWN(addr+PGSIZE) - addr)
+
 int islazypage(uint64 va) {
   pte_t *pte = walk(myproc()->pagetable, va, 0);
   if (!(*pte & PTE_V)) {
     for (int fd = 0; fd < NOFILE; fd++) {
-      writeback *wb = &myproc()->wb[fd];
-      if (wb->flags & WB_VALID && !(wb->flags & WB_READ)) {
-        if (wb->start <= va && va < PGROUNDDOWN(wb->start + wb->npages*PGSIZE)) {
+      vm_area *mfile = &myproc()->mfiles[fd];
+      if (mfile->flags & VMA_VALID && !(mfile->flags & VMA_READ)) {
+        if (mfile->start <= va && va < MMAP_END(mfile->start, mfile->npages)) {
           return fd;
         }
       }
@@ -197,8 +201,8 @@ int islazypage(uint64 va) {
 
 // load page for that va
 int msync_read(int fd, uint64 va) {
-  struct writeback *wb = &myproc()->wb[fd];
-  if (!(wb->flags & WB_VALID)) {
+  vm_area *mfile = &myproc()->mfiles[fd];
+  if (!(mfile->flags & VMA_VALID)) {
     return 1;
   }
   struct file *file = myproc()->ofile[fd];
@@ -206,21 +210,21 @@ int msync_read(int fd, uint64 va) {
     return 2;
   }
 
-  if (wb->flags & WB_READ) {
+  if (mfile->flags & VMA_READ) {
     return 3;
   }
 
   int bef = file->off;
-  file->off = wb->offset;
+  file->off = mfile->offset;
 
   pagetable_t table = myproc()->pagetable;
   pte_t *pte = walk(table, va, 0);
   *pte |= PTE_V;
-  if (va < PGROUNDDOWN(wb->start + PGSIZE)) {
+  if (va < PGROUNDDOWN(mfile->start + PGSIZE)) {
     // first page
-    fileread(file, wb->start, PGROUNDDOWN(wb->start+PGSIZE) - wb->start);
+    fileread(file, mfile->start, PAGE_LEFT(mfile->start));
   } else {
-    file->off += PGROUNDDOWN(va) - wb->start;
+    file->off += PGROUNDDOWN(va) - mfile->start;
     fileread(file, PGROUNDDOWN(va), PGSIZE);
   }
   *pte &= ~PTE_D;
@@ -230,8 +234,8 @@ int msync_read(int fd, uint64 va) {
 }
 
 int msync_read_all(int fd) {
-  struct writeback *wb = &myproc()->wb[fd];
-  if (!(wb->flags & WB_VALID)) {
+  vm_area *mfile = &myproc()->mfiles[fd];
+  if (!(mfile->flags & VMA_VALID)) {
     return 1;
   }
   struct file *file = myproc()->ofile[fd];
@@ -239,46 +243,35 @@ int msync_read_all(int fd) {
     return 2;
   }
 
-  if (wb->flags & WB_READ) {
+  if (mfile->flags & VMA_READ) {
     return 3;
   }
 
   int bef = file->off;
-  file->off = wb->offset;
+  file->off = mfile->offset;
 
   pagetable_t table = myproc()->pagetable;
-  uint64 va = wb->start;
-  pte_t *pte = walk(table, va, 0);
 
-  // first page
-  if (!(*pte & PTE_V)) {
-    *pte |= PTE_V;
-    fileread(file, va, PGROUNDDOWN(va+PGSIZE) - va);
-    *pte &= ~PTE_D; 
-  } else {
-    file->off += PGROUNDUP(va) - va;
-  }
-
-  for (va = PGROUNDDOWN(va+PGSIZE); va < PGROUNDDOWN(wb->start + wb->npages*PGSIZE); va += PGSIZE)
+  for (uint64 va = mfile->start; va < MMAP_END(mfile->start, mfile->npages); va += PGSIZE)
   {
     pte_t *pte = walk(table, va, 0);
     if (!(*pte & PTE_V)) {
        *pte |= PTE_V;
-       fileread(file, va, PGSIZE);
+       fileread(file, va, PAGE_LEFT(va));
        *pte &= ~PTE_D; 
     } else {
-      file->off += PGSIZE;
+      file->off += PAGE_LEFT(va);
     }
   }
 
-  wb->flags |= WB_READ;
+  mfile->flags |= VMA_READ;
   file->off = bef;
   return 0;
 }
 
 int msync(int fd) {
-  writeback *wb = &myproc()->wb[fd];
-  if (!(wb->flags & WB_VALID)) {
+  vm_area *mfile = &myproc()->mfiles[fd];
+  if (!(mfile->flags & VMA_VALID)) {
     return 1;
   }
 
@@ -288,35 +281,25 @@ int msync(int fd) {
   }
   
   // should not propogate
-  if (!(wb->flags & WB_PROP)) {
+  if (!(mfile->flags & VMA_PROP)) {
     return 0;
   }
 
   // writeback
 
   int bef = file->off;
-  file->off = wb->offset;
+  file->off = mfile->offset;
 
-  uint64 va = wb->start;
-
-  // first page
   pagetable_t table = myproc()->pagetable;
-  pte_t *pte = walk(table, va, 0);
-  if (*pte & PTE_D && *pte & PTE_V) {
-    filewrite(file, va, PGROUNDDOWN(va+PGSIZE) - va);
-    *pte &= ~PTE_D; 
-  } else {
-    file->off += PGROUNDUP(va) - va;
-  }
 
-  for (va = PGROUNDDOWN(va+PGSIZE); va < PGROUNDDOWN(wb->start + wb->npages*PGSIZE); va += PGSIZE)
+  for (uint64 va = mfile->start; va < MMAP_END(mfile->start, mfile->npages); va += PGSIZE)
   {
     pte_t *pte = walk(table, va, 0);
     if (*pte & PTE_D && *pte & PTE_V) {
-       filewrite(file, va, PGSIZE);
+       filewrite(file, va, PAGE_LEFT(va));
        *pte &= ~PTE_D; 
     } else {
-      file->off += PGSIZE;
+      file->off += PAGE_LEFT(va);
     }
   }
 

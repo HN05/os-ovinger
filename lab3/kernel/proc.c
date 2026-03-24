@@ -382,7 +382,7 @@ int fork(void)
     // perform msync writeback
     for (i = 0; i < NOFILE; i++)
     {
-        if (p->wb[i].flags & WB_VALID) {
+        if (p->mfiles[i].flags & VMA_VALID) {
             msync(i);
         }
     }
@@ -396,8 +396,8 @@ int fork(void)
     // copy writeback
     for (i = 0; i < NOFILE; i++)
     {
-        if (p->wb[i].flags & WB_VALID) {
-            np->wb[i] = p->wb[i];
+        if (p->mfiles[i].flags & VMA_VALID) {
+            np->mfiles[i] = p->mfiles[i];
         }
     }
 
@@ -471,9 +471,9 @@ void exit(int status)
     {
         if (p->ofile[fd])
         {
-            if (p->wb[fd].flags & WB_VALID) {
+            if (p->mfiles[fd].flags & VMA_VALID) {
                 msync(fd);
-                p->wb[fd].flags &= ~WB_VALID;
+                p->mfiles[fd].flags &= ~VMA_VALID;
             }
             struct file *f = p->ofile[fd];
             fileclose(f);
