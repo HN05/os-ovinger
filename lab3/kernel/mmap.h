@@ -6,4 +6,5 @@
 #define PROT_PROP (1 << 4)
 #define PROT_UNPROP (1 << 5)
 #define PROT_POPULATE (1 << 6)
+#define PROT_NOFILE (1 << 7)
 

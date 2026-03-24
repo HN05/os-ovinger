@@ -526,13 +526,23 @@ uint64 sys_mmap(void)
   argint(2, &protocol);
   argfd(3, &fd, &file);
 
+  int usefile = !(protocol & PROT_NOFILE);
+
+  if (npages < 1) {
+    return 66;
+  }
+
+  if (usefile && !file) {
+    return 67;
+  }
+
   int offset;
-  if (file) {
+  if (usefile) {
     offset = file->off;
   }
 
   // flush existing mapping
-  if (file) {
+  if (usefile) {
     msync(fd);
     pop_vma(fd);
   }
@@ -543,7 +553,7 @@ uint64 sys_mmap(void)
   }
 
   // map mfile
-  if (file) {
+  if (usefile) {
     vm_area *mfile = &myproc()->mfiles[fd];
 
     mfile->flags = VMA_VALID;

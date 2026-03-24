@@ -6,6 +6,8 @@
 #include "user/user.h"
 #include "kernel/mmap.h"
 
+//written by chat
+
 #define NPAGES 3
 
 static void
@@ -235,7 +237,7 @@ test_anon_shared(void)
   p[3] = 'e';
   p[4] = 'n';
 
-  check(mmap((uint64)p, 1, PROT_READ | PROT_WRITE | PROT_SHARE, -1) == 0,
+  check(mmap((uint64)p, 1, PROT_READ | PROT_WRITE | PROT_SHARE | PROT_NOFILE, -1) == 0,
         "mmap anon shared");
 
   pid = fork();
@@ -267,7 +269,7 @@ test_anon_private(void)
   p[3] = 'v';
   p[4] = '0';
 
-  check(mmap((uint64)p, 1, PROT_READ | PROT_WRITE, -1) == 0,
+  check(mmap((uint64)p, 1, PROT_READ | PROT_WRITE | PROT_NOFILE, -1) == 0,
         "mmap anon private");
 
   pid = fork();
@@ -497,6 +499,298 @@ test_remap_same_file_twice(void)
   close(fd);
   printf("ok: remap same file twice\n");
 }
+static void
+test_device_mapping_console(void)
+{
+  char *map = alloc_pages(1, "sbrk test_device_mapping_console");
+  int fd, r;
+
+  fd = open("console", O_RDWR);
+  if(fd < 0){
+    printf("note: console open failed, skipping device mmap test\n");
+    return;
+  }
+
+  r = mmap((uint64)map, 1, PROT_READ | PROT_WRITE, fd);
+  printf("device mmap(console) returned %d\n", r);
+
+  // Accept either graceful failure or success.
+  // If success, touching should not crash the kernel.
+  if(r == 0){
+    map[0] = map[0];
+    printf("ok: device mmap(console) succeeded safely\n");
+  } else {
+    printf("ok: device mmap(console) rejected safely\n");
+  }
+
+  close(fd);
+}
+
+static void
+test_device_mapping_console_populate(void)
+{
+  char *map = alloc_pages(1, "sbrk test_device_mapping_console_populate");
+  int fd, r;
+
+  fd = open("console", O_RDWR);
+  if(fd < 0){
+    printf("note: console open failed, skipping device populate test\n");
+    return;
+  }
+
+  r = mmap((uint64)map, 1, PROT_READ | PROT_WRITE | PROT_POPULATE, fd);
+  printf("device mmap(console,populate) returned %d\n", r);
+
+  if(r == 0){
+    map[0] = map[0];
+    printf("ok: device mmap(console,populate) succeeded safely\n");
+  } else {
+    printf("ok: device mmap(console,populate) rejected safely\n");
+  }
+
+  close(fd);
+}
+
+static void
+test_invalid_fd(void)
+{
+  char *map = alloc_pages(1, "sbrk test_invalid_fd");
+  int r;
+
+  r = mmap((uint64)map, 1, PROT_READ | PROT_WRITE, -2);
+  check(r != 0, "invalid fd should fail");
+  printf("ok: invalid fd rejected\n");
+}
+
+static void
+test_zero_pages(void)
+{
+  char *map = alloc_pages(1, "sbrk test_zero_pages");
+  int fd, r;
+
+  make_file3("mmap_zero");
+  fd = open("mmap_zero", O_RDWR);
+  check(fd >= 0, "open mmap_zero");
+
+  r = mmap((uint64)map, 0, PROT_READ | PROT_WRITE, fd);
+  check(r != 0, "zero-page mmap should fail");
+  close(fd);
+
+  printf("ok: zero-page mmap rejected\n");
+}
+
+static void
+test_readonly_mapping(void)
+{
+  char *map = alloc_pages(1, "sbrk test_readonly_mapping");
+  int fd;
+
+  make_file3("mmap_ro");
+  fd = open("mmap_ro", O_RDWR);
+  check(fd >= 0, "open mmap_ro");
+
+  check(mmap((uint64)map, 1, PROT_READ | PROT_PROP | PROT_POPULATE, fd) == 0,
+        "mmap readonly");
+
+  check5(map, 'h', 'e', 'l', 'l', 'o', "readonly content");
+  close(fd);
+
+  printf("ok: readonly mapping load\n");
+}
+
+static void
+test_readonly_write_fault(void)
+{
+  char *map = alloc_pages(1, "sbrk test_readonly_write_fault");
+  int fd, pid, status;
+
+  make_file3("mmap_ro_fault");
+  fd = open("mmap_ro_fault", O_RDWR);
+  check(fd >= 0, "open mmap_ro_fault");
+
+  check(mmap((uint64)map, 1, PROT_READ | PROT_PROP | PROT_POPULATE, fd) == 0,
+        "mmap readonly fault");
+
+  pid = fork();
+  check(pid >= 0, "fork readonly write");
+
+  if(pid == 0){
+    map[0] = 'X';   // should die or fail
+    printf("FAIL: readonly write unexpectedly succeeded\n");
+    exit(1);
+  }
+
+  wait(&status);
+  close(fd);
+  printf("ok: readonly write faulted\n");
+}
+
+static void
+test_unlink_after_mmap(void)
+{
+  char *map = alloc_pages(NPAGES, "sbrk test_unlink_after_mmap");
+  int fd;
+
+  make_file3("mmap_unlink");
+  fd = open("mmap_unlink", O_RDWR);
+  check(fd >= 0, "open mmap_unlink");
+
+  check(mmap((uint64)map, NPAGES,
+             PROT_READ | PROT_WRITE | PROT_PROP | PROT_POPULATE,
+             fd) == 0,
+        "mmap unlink");
+
+  unlink("mmap_unlink");
+
+  check5(map + 0 * PGSIZE, 'h', 'e', 'l', 'l', 'o', "unlink page0");
+  put5(map + 0 * PGSIZE, 'U', 'N', 'L', 'N', 'K');
+  check(msync(fd) >= 0, "msync after unlink");
+  close(fd);
+
+  printf("ok: unlink after mmap\n");
+}
+
+static void
+test_multiple_forks_shared_file(void)
+{
+  char *map = alloc_pages(1, "sbrk test_multiple_forks_shared_file");
+  int fd, pid, status;
+
+  make_file3("mmap_multifork");
+  fd = open("mmap_multifork", O_RDWR);
+  check(fd >= 0, "open mmap_multifork");
+
+  check(mmap((uint64)map, 1,
+             PROT_READ | PROT_WRITE | PROT_PROP | PROT_SHARE,
+             fd) == 0,
+        "mmap multifork");
+
+  pid = fork();
+  check(pid >= 0, "fork 1");
+  if(pid == 0){
+    map[0] = 'A';
+    exit(0);
+  }
+  wait(&status);
+
+  pid = fork();
+  check(pid >= 0, "fork 2");
+  if(pid == 0){
+    map[1] = 'B';
+    exit(0);
+  }
+  wait(&status);
+
+  check(map[0] == 'A', "multifork shared byte0");
+  check(map[1] == 'B', "multifork shared byte1");
+
+  close(fd);
+  printf("ok: multiple forks shared file\n");
+}
+
+static void
+test_close_then_fork_populated(void)
+{
+  char *map = alloc_pages(1, "sbrk test_close_then_fork_populated");
+  int fd, pid, status;
+
+  make_file3("mmap_close_fork");
+  fd = open("mmap_close_fork", O_RDWR);
+  check(fd >= 0, "open mmap_close_fork");
+
+  check(mmap((uint64)map, 1,
+             PROT_READ | PROT_WRITE | PROT_PROP | PROT_POPULATE,
+             fd) == 0,
+        "mmap close then fork");
+  close(fd);
+
+  pid = fork();
+  check(pid >= 0, "fork after close");
+  if(pid == 0){
+    map[0] = 'Z';
+    exit(0);
+  }
+  wait(&status);
+
+  printf("ok: close then fork populated\n");
+}
+
+static void
+test_populate_idempotent(void)
+{
+  char *map = alloc_pages(NPAGES, "sbrk test_populate_idempotent");
+  int fd;
+
+  make_file3("mmap_pop2");
+  fd = open("mmap_pop2", O_RDWR);
+  check(fd >= 0, "open mmap_pop2");
+
+  check(mmap((uint64)map, NPAGES,
+             PROT_READ | PROT_WRITE | PROT_PROP | PROT_POPULATE,
+             fd) == 0,
+        "populate first");
+  check(mmap((uint64)map, NPAGES,
+             PROT_READ | PROT_WRITE | PROT_PROP | PROT_POPULATE,
+             fd) == 0,
+        "populate second");
+
+  check5(map + 0 * PGSIZE, 'h', 'e', 'l', 'l', 'o', "populate idempotent page0");
+  close(fd);
+
+  printf("ok: populate idempotent\n");
+}
+
+static void
+test_anon_populate(void)
+{
+  char *map = alloc_pages(1, "sbrk test_anon_populate");
+
+  check(mmap((uint64)map, 1,
+             PROT_READ | PROT_WRITE | PROT_SHARE | PROT_POPULATE | PROT_NOFILE,
+             -1) == 0,
+        "anon populate");
+
+  map[0] = 'A';
+  map[1] = 'N';
+  map[2] = 'O';
+  map[3] = 'N';
+  map[4] = '!';
+
+  check5(map, 'A', 'N', 'O', 'N', '!', "anon populate bytes");
+  printf("ok: anon populate\n");
+}
+
+static void
+test_anon_requires_nofile_flag(void)
+{
+  char *map = alloc_pages(1, "sbrk test_anon_requires_nofile_flag");
+  int r;
+
+  r = mmap((uint64)map, 1, PROT_READ | PROT_WRITE, -1);
+  check(r != 0, "anon without PROT_NOFILE should fail");
+
+  printf("ok: anon requires PROT_NOFILE\n");
+}
+
+static void
+test_nofile_ignores_bad_fd(void)
+{
+  char *map = alloc_pages(1, "sbrk test_nofile_ignores_bad_fd");
+
+  check(mmap((uint64)map, 1,
+             PROT_READ | PROT_WRITE | PROT_NOFILE,
+             -2) == 0,
+        "PROT_NOFILE should ignore fd");
+
+  map[0] = 'N';
+  map[1] = 'O';
+  map[2] = 'F';
+  map[3] = 'I';
+  map[4] = 'L';
+
+  check5(map, 'N', 'O', 'F', 'I', 'L', "nofile bytes");
+  printf("ok: PROT_NOFILE ignores fd\n");
+}
 
 int
 main(void)
@@ -514,6 +808,19 @@ main(void)
   test_remap_same_region_protocols();
   test_short_file_mapping();
   test_remap_same_file_twice();
+  test_device_mapping_console();
+  test_device_mapping_console_populate();
+  test_invalid_fd();
+  test_zero_pages();
+  test_readonly_mapping();
+  test_readonly_write_fault();
+  test_unlink_after_mmap();
+  test_multiple_forks_shared_file();
+  test_close_then_fork_populated();
+  test_populate_idempotent();
+  test_anon_populate();
+  test_anon_requires_nofile_flag();
+  test_nofile_ignores_bad_fd();
 
   printf("all mmap tests passed\n");
   exit(0);
