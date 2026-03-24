@@ -180,3 +180,38 @@ filewrite(struct file *f, uint64 addr, int n)
   return ret;
 }
 
+int msync(int fd, struct file *file) {
+  writeback wb = myproc()->wb[fd];
+  if (wb.valid != 1) {
+    return 1;
+  }
+
+  int bef = file->off;
+  file->off = wb.offset;
+
+  uint64 va = wb.start;
+
+  // first page
+  pagetable_t table = myproc()->pagetable;
+  pte_t *pte = walk(table, va, 0);
+  if (*pte & PTE_D) {
+    filewrite(file, va, PGROUNDDOWN(va+PGSIZE) - va);
+    *pte &= ~PTE_D; 
+  } else {
+    file->off += PGROUNDUP(va) - va;
+  }
+
+  for (va = PGROUNDDOWN(va+PGSIZE); va < PGROUNDDOWN(wb.start + wb.npages*PGSIZE); va += PGSIZE)
+  {
+    pte_t *pte = walk(table, va, 0);
+    if (*pte & PTE_D) {
+       filewrite(file, va, PGSIZE);
+       *pte &= ~PTE_D; 
+    } else {
+      file->off += PGSIZE;
+    }
+  }
+
+  file->off = bef;
+  return 0;
+}

@@ -47,6 +47,7 @@ int schedset(int);
 uint64 va2pa(uint64 addr, int pid);
 void pfreepages(void);
 uint64 mmap(uint64 vaddr, int npages, int protocol, int fd);
+uint64 msync(int fd);
 #define print_free_frame_cnt() (pfreepages())
 
 // ulib.c

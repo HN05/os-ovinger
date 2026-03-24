@@ -402,8 +402,12 @@ int fork(void)
 
     // increment reference counts on open file descriptors.
     for (i = 0; i < NOFILE; i++)
+    {
         if (p->ofile[i])
             np->ofile[i] = filedup(p->ofile[i]);
+        if (p->wb[i].valid)
+            np->wb[i] = p->wb[i];
+    }
     np->cwd = idup(p->cwd);
 
     safestrcpy(np->name, p->name, sizeof(p->name));
@@ -455,6 +459,9 @@ void exit(int status)
         if (p->ofile[fd])
         {
             struct file *f = p->ofile[fd];
+            if (p->wb[fd].valid) {
+                msync(fd, f);
+            }
             fileclose(f);
             p->ofile[fd] = 0;
         }

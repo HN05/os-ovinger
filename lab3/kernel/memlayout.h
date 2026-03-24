@@ -71,3 +71,4 @@
 #define PROT_WRITE (1 << 1)
 #define PROT_EXEC (1 << 2)
 #define PROT_SHARE (1 << 3)
+#define PROT_PROP (1 << 4)

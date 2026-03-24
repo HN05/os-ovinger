@@ -472,6 +472,9 @@ int mmap(uint64 vaddr, int npages, pagetable_t pagetable, int protocol, struct f
 
     uint flags = PTE_FLAGS(*pte);
 
+    // unset dirty bit
+    *pte &= ~PTE_D;
+
     if (file) {
       if (!(flags & PTE_R && flags & PTE_W)) {
         return 5; // cant map file to non read/write mem

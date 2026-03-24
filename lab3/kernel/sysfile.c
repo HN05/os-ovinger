@@ -15,6 +15,7 @@
 #include "sleeplock.h"
 #include "file.h"
 #include "fcntl.h"
+#include "memlayout.h"
 
 // Fetch the nth word-sized system call argument as a file descriptor
 // and return both the descriptor and the corresponding struct file.
@@ -506,14 +507,37 @@ sys_pipe(void)
 
 uint64 sys_mmap(void)
 {
-    uint64 vaddr;
-    int npages;
-    int protocol;
-    struct file *file = 0;
-    argaddr(0, &vaddr);
-    argint(1, &npages);
-    argint(2, &protocol);
-    argfd(3, 0, &file);
+  uint64 vaddr;
+  int npages;
+  int protocol;
+  int fd;
+  struct file *file = 0;
+  argaddr(0, &vaddr);
+  argint(1, &npages);
+  argint(2, &protocol);
+  argfd(3, &fd, &file);
 
-    return mmap(vaddr, npages, myproc()->pagetable, protocol, file);
+  int offset = file->off;
+
+  int status = mmap(vaddr, npages, myproc()->pagetable, protocol, file);
+  if (status != 0) {
+    return status;
+  }
+  // map writeback
+  if (file && (protocol & PROT_PROP)) {
+    writeback *wb = &myproc()->wb[fd];
+    wb->valid = 1;
+    wb->npages = npages;
+    wb->start = vaddr;
+    wb->offset = offset;
+  }
+  return 0;
+}
+
+uint64 sys_msync(void)
+{
+  int fd;
+  struct file *file;
+  argfd(0, &fd, &file);
+  return msync(fd, file);
 }

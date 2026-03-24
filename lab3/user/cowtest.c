@@ -99,6 +99,7 @@ void testcase4()
         printf("wait() error!");
         exit(1);
     }
+    // moved this one down to fix wrong test
     printf("[prnt] pa3 --> 0x%x\n", va2pa((uint64)&global_array[0], getpid()));
 
     printf("[prnt] global_array[0] --> %d\n", global_array[0]);

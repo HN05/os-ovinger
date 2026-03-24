@@ -26,3 +26,4 @@
 #define SYS_pfreepages 25
 #define SYS_va2pa 26
 #define SYS_mmap 27
+#define SYS_msync 28
