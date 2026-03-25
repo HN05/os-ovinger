@@ -24,6 +24,28 @@ int mfile_lookup(uint64 va) {
   return -1; // no vma found
 }
 
+static int vma_init(vm_area **mout, struct file **fout, pagetable_t *tout, int fd, int checkread) {
+  struct proc *p = myproc();
+  vm_area *mfile = &p->mfiles[fd];
+  if (!(mfile->flags & VMA_VALID)) {
+    return 1;
+  }
+  if (mfile->flags & VMA_READ && checkread) {
+    return 2;
+  }
+  struct file *file = p->ofile[fd];
+  if (!file) {
+    return 3;
+  }
+  
+  *mout = mfile;
+  *fout = file;
+  *tout = p->pagetable;
+  
+  return 0;
+}
+
+
 static void page_in(uint64 va, struct file *file, pagetable_t table) {
   pte_t *pte = walk(table, va, 0);
   if (!(*pte & PTE_V)) {
@@ -35,28 +57,28 @@ static void page_in(uint64 va, struct file *file, pagetable_t table) {
   }
 }
 
-// load page for that va
-int pop_vma_single(int fd, uint64 va) {
-  vm_area *mfile = &myproc()->mfiles[fd];
-  if (!(mfile->flags & VMA_VALID)) {
-    return 1;
+static void page_out(uint64 va, struct file *file, pagetable_t table) {
+  pte_t *pte = walk(table, va, 0);
+  if (*pte & PTE_D && *pte & PTE_V) {
+     filewrite(file, va, PAGE_LEFT(va));
+     *pte &= ~PTE_D; 
+  } else {
+    file->off += PAGE_LEFT(va);
   }
-  if (mfile->flags & VMA_READ) {
-    return 4;
-  }
-  struct file *file = myproc()->ofile[fd];
-  if (!file) {
-    return 2;
-  }
+}
 
-  if (mfile->flags & VMA_READ) {
-    return 3;
+int pop_vma_single(int fd, uint64 va) {
+  vm_area *mfile;
+  struct file *file;
+  pagetable_t table;
+  int status = vma_init(&mfile, &file, &table, fd, 1);
+  if (status != 0) {
+    return status;
   }
 
   int bef = file->off;
   file->off = mfile->offset;
 
-  pagetable_t table = myproc()->pagetable;
 
   if (va < MMAP_END(mfile->start, 1)) {
     // first page
@@ -72,53 +94,34 @@ int pop_vma_single(int fd, uint64 va) {
 
 
 int pop_vma(int fd) {
-  vm_area *mfile = &myproc()->mfiles[fd];
-  if (!(mfile->flags & VMA_VALID)) {
-    return 1;
-  }
-  struct file *file = myproc()->ofile[fd];
-  if (!file) {
-    return 2;
-  }
-
-  if (mfile->flags & VMA_READ) {
-    return 3;
+  vm_area *mfile;
+  struct file *file;
+  pagetable_t table;
+  int status = vma_init(&mfile, &file, &table, fd, 1);
+  if (status != 0) {
+    return status;
   }
 
   int bef = file->off;
   file->off = mfile->offset;
-
-  pagetable_t table = myproc()->pagetable;
 
   for (uint64 va = mfile->start; va < MMAP_END(mfile->start, mfile->npages); va += PGSIZE)
   {
     page_in(va, file, table);
   }
 
-  mfile->flags |= VMA_READ;
   file->off = bef;
+  mfile->flags |= VMA_READ;
   return 0;
 }
 
-static void page_out(uint64 va, struct file *file, pagetable_t table) {
-  pte_t *pte = walk(table, va, 0);
-  if (*pte & PTE_D && *pte & PTE_V) {
-     filewrite(file, va, PAGE_LEFT(va));
-     *pte &= ~PTE_D; 
-  } else {
-    file->off += PAGE_LEFT(va);
-  }
-}
-
 int msync(int fd) {
-  vm_area *mfile = &myproc()->mfiles[fd];
-  if (!(mfile->flags & VMA_VALID)) {
-    return 1;
-  }
-
-  struct file *file = myproc()->ofile[fd];
-  if (!file) {
-    return 2;
+  vm_area *mfile;
+  struct file *file;
+  pagetable_t table;
+  int status = vma_init(&mfile, &file, &table, fd, 1);
+  if (status != 0) {
+    return status;
   }
   
   // should not propogate
@@ -130,8 +133,6 @@ int msync(int fd) {
 
   int bef = file->off;
   file->off = mfile->offset;
-
-  pagetable_t table = myproc()->pagetable;
 
   for (uint64 va = mfile->start; va < MMAP_END(mfile->start, mfile->npages); va += PGSIZE)
   {
