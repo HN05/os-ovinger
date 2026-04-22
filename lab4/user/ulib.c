@@ -4,22 +4,22 @@
 #include "user.h"
 #include "uthread.h"
 
-int thread_index = 0;
-struct thread *tpool[MAX_THREADS];
+int curtid = 0;
+struct thread *threads[NTHREADS] = {0};
 
 struct mainargs {
     int argc;
     char **argv;
 };
 
-static void *main_help(void *arg) {
+static void *main_wrapper(void *arg) {
     extern int main(int argc, char *argv[]);
-    struct mainargs *a = arg;
+    struct mainargs *args = arg;
 
-    int *buf = malloc(sizeof *buf);
-    *buf = main(a->argc, a->argv);
+    int *result = malloc(sizeof *result);
+    *result = main(args->argc, args->argv);
 
-    return buf;
+    return result;
 }
 
 //
@@ -27,17 +27,20 @@ static void *main_help(void *arg) {
 //
 void _main(int argc, char *argv[])
 {
-    // TODO: Ensure that main also is taken into consideration by the thread scheduler
-    // TODO: This function should only return once all threads have finished running
-
     struct thread *thread;
     struct thread_attr attr = { .res_size = sizeof(int) };
     static struct mainargs arg;
     arg.argc = argc;
     arg.argv = argv;
 
-    tcreate(&thread, &attr, main_help, &arg);
+    tcreate(&thread, &attr, main_wrapper, &arg);
+
+    thread->state = RUNNING;
+
+    // just written to, never used
     static struct context temp;
+
+    // start executing main
     tswtch(&temp, &thread->tcontext);
 
     // never gets here

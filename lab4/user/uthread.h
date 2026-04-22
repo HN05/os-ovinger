@@ -1,4 +1,4 @@
-#define MAX_THREADS 9
+#define NTHREADS 256
 
-extern int thread_index;
-extern struct thread *tpool[MAX_THREADS];
+extern int curtid;
+extern struct thread *threads[NTHREADS];

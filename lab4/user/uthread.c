@@ -9,70 +9,79 @@
 // all threads start executing here
 static void tentry()
 {
-    struct thread *thread = tpool[thread_index];
+    struct thread *thread = threads[curtid];
 
     // run the func
-    void *ret = thread->func(thread->arg);
+    void *resbuf = thread->func(thread->arg);
     
-    thread->res = ret;
+    thread->res = resbuf;
 
     thread->state = EXITED;
+    // wake all waiters
+    for (int tid = 0; tid < NTHREADS; tid++) {
+        if (threads[tid]->waiting_for == thread->tid) {
+            threads[tid]->state = RUNNABLE;
+            threads[tid]->waiting_for = -1;
+        }
+    }
     tsched();
 
     // all finished
-    int *result = tpool[0]->res;
+    int *result = threads[0]->res;
     exit(*result);
 }
 
+// not tsched responsibility to set old to runnable
 void tsched()
 {
-    struct thread *oldt = tpool[thread_index];
-
-    int next = -1;
-    for (int i = 1; i <= MAX_THREADS; i++) {
-        int index = (i + thread_index) % MAX_THREADS;
-        if (tpool[index] && tpool[index]->state == RUNNABLE) {
-            next = index;
+    int nextid = -1;
+    for (int i = 1; i <= NTHREADS; i++) {
+        int index = (i + curtid) % NTHREADS;
+        if (threads[index] && threads[index]->state == RUNNABLE) {
+            nextid = index;
             break;
         }
     }
 
-    if (next == -1) {
-        return;
-    }
+    // all threads exited
+    if (nextid == -1) return;
 
-    if (next == thread_index) {
-        return;
-    }
+    struct thread *next = threads[nextid];
+    next->state = RUNNING;
 
-    struct thread *nextt = tpool[next];
+    // only currently running thread
+    if (nextid == curtid) return;
 
-    thread_index = next;
-    tswtch(&oldt->tcontext, &nextt->tcontext);
-
-    // TODO: Implement a userspace round robin scheduler that switches to the next thread
+    struct thread *oldt = threads[curtid];
+    curtid = nextid;
+    tswtch(&oldt->tcontext, &next->tcontext);
 }
 
 void tcreate(struct thread **thread, struct thread_attr *attr, void *(*func)(void *arg), void *arg)
 {
     // find location
     int tid = -1;
-    for (int i = 0; i < MAX_THREADS; i++) {
-        if (tpool[i] && tpool[i]->state != UNUSED) continue;
+    for (int i = 0; i < NTHREADS; i++) {
+        if (threads[i] && threads[i]->state != UNUSED) continue;
         tid = i;
         break;
     }
+    // no available slots
     if (tid == -1) return;
 
-    struct thread *cthread = tpool[tid]; 
+    struct thread *cthread = threads[tid]; 
     if (!cthread) {
+        // no space allocated for thread
         cthread = malloc(sizeof *cthread);
-        tpool[tid] = cthread;
         if (!cthread) return;
+        threads[tid] = cthread;
     }
 
+    // default vals
     uint32 stacksize = PGSIZE;
     cthread->res_size = 0;
+    cthread->waiting_for = -1;
+
     if (attr) {
         if (attr->res_size) {
             cthread->res_size = attr->res_size;
@@ -96,19 +105,21 @@ void tcreate(struct thread **thread, struct thread_attr *attr, void *(*func)(voi
     cthread->state = RUNNABLE;
 
     *thread = cthread;
-    
-    // TODO: Create a new process and add it as runnable, such that it starts running
-    // once the scheduler schedules it the next time
 }
 
 int tjoin(int tid, void *status, uint size)
 {
-    while (tpool[tid]->state != EXITED) {
-        tyield();
+    struct thread *wthread = threads[tid];
+    if (wthread->state != EXITED) {
+        threads[curtid]->state = SLEEPING;
+        threads[curtid]->waiting_for = tid;
+        tsched();
     }
+    
     if (status && size) {
-        uint amount = tpool[tid]->res_size > size ? size : tpool[tid]->res_size;
-        memcpy(status, tpool[tid]->res, amount);
+        // choose min of res_size and size
+        uint safesize = wthread->res_size > size ? size : wthread->res_size;
+        memcpy(status, wthread->res, safesize);
     }
 
     return 0;
@@ -116,11 +127,11 @@ int tjoin(int tid, void *status, uint size)
 
 void tyield()
 {
-    tpool[thread_index]->state = RUNNABLE;
+    threads[curtid]->state = RUNNABLE;
     tsched();
 }
 
 uint8 twhoami()
 {
-    return thread_index;
+    return curtid;
 }

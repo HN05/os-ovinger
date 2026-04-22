@@ -109,7 +109,8 @@ struct thread
 
     uint32 res_size;
     void *res;
-    // Feel free to add more fields as needed
+
+    int waiting_for;
 };
 
 /// @brief These are the attributes that can be set when creating a thread.
